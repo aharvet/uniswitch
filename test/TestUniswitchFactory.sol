@@ -9,15 +9,14 @@ import "../contracts/UniswitchFactory.sol";
 
 
 contract TestUniswitchFactory {
-    function testLaunchPool() external {
-        TestToken token = TestToken(DeployedAddresses.TestToken());
-        UniswitchFactory instance = UniswitchFactory(DeployedAddresses.UniswitchFactory());
+    function testLaunchPool() public {
+        UniswitchFactory factory = UniswitchFactory(DeployedAddresses.UniswitchFactory());
 
         address _token = DeployedAddresses.TestToken();
-        address _newPool = instance.launchPool(_token);
-        address _fromTokens = instance.tokens(0);
-        address _fromPoolToToken = instance.poolToToken(_newPool);
-        address _fromTokenToPool = instance.tokenToPool(_token);
+        address _newPool = factory.launchPool(_token);
+        address _fromTokens = factory.tokens(0);
+        address _fromPoolToToken = factory.poolToToken(_newPool);
+        address _fromTokenToPool = factory.tokenToPool(_token);
 
         Assert.equal(_fromPoolToToken, _token, "Wrong address stored");
         Assert.equal(_fromTokenToPool, _newPool, "Wrong address stored");
