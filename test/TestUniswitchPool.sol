@@ -39,4 +39,20 @@ contract TestUniswitchPool {
         Assert.equal(userShares, 1000, "Bad user shares amount");
         Assert.equal(totalShares, 1000, "Bad total shares amount");
     }
+
+    function testEthToTokenSwitch() public {
+        uint256 userInitialBalance = token.balanceOf(address(this));
+        pool.ethToTokenSwitch{value: 10000}(0);
+        uint256 userFinalBalance = token.balanceOf(address(this));
+
+        Assert.equal(userFinalBalance - userInitialBalance, 10000, "Bad token amount");
+    }
+
+    function testEthToTokenSwitch2() public {
+        uint256 userInitialBalance = token.balanceOf(address(this));
+        pool.ethToTokenSwitch{value: 10000}(0);
+        uint256 userFinalBalance = token.balanceOf(address(this));
+
+        Assert.equal(userFinalBalance - userInitialBalance, 9801, "Bad token amount");
+    }
 }

@@ -21,6 +21,9 @@ contract UniswitchPool {
         _;
     }
 
+    event PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount);
+    event EthToTokenSwitch(address user, address token, uint256 weiAmount, uint256 tokenAmount);
+
     constructor(address _tokenAddr) public {
         require(_tokenAddr != address(0), "Zero address provided");
 
@@ -33,7 +36,9 @@ contract UniswitchPool {
         shares[msg.sender] = 1000;
         totalShares = 1000;
 
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount));
+        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
+
+        emit PoolInitialized(address(this), address(token), msg.value, _tokenAmount);
     }
 
     function investLiquidity() external payable initialized {
@@ -44,11 +49,18 @@ contract UniswitchPool {
 
     }
 
-    function tokenToEthSwitch() external {
+    function ethToTokenSwitch(uint256 _minTokenOut) external payable {
+        uint256 weiBalance = address(this).balance.sub(msg.value);
+        uint256 tokenBalance = token.balanceOf(address(this));
+        uint256 tokenOut = msg.value.mul(tokenBalance).div(weiBalance);
 
+        require(tokenOut >= _minTokenOut, "Not enough tokens provided");
+        require(token.transfer(msg.sender, tokenOut), "Error in token transfer");
+
+        emit EthToTokenSwitch(msg.sender, address(token), msg.value, tokenOut);
     }
 
-    function ethToTokenSwitch() external {
+    function tokenToEthSwitch() external {
 
     }
 }
