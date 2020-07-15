@@ -4,9 +4,10 @@ pragma solidity ^0.6.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./test/Debug.sol";
 
 
-contract UniswitchPool {
+contract UniswitchPool is Debug {
     using SafeMath for uint256;
 
     IERC20 token;
@@ -54,13 +55,20 @@ contract UniswitchPool {
         uint256 tokenBalance = token.balanceOf(address(this));
         uint256 tokenOut = msg.value.mul(tokenBalance).div(weiBalance);
 
-        require(tokenOut >= _minTokenOut, "Not enough tokens provided");
+        require(tokenOut >= _minTokenOut, "Not enough wei provided");
+        // require(enough volume in pools)
         require(token.transfer(msg.sender, tokenOut), "Error in token transfer");
 
         emit EthToTokenSwitch(msg.sender, address(token), msg.value, tokenOut);
     }
 
-    function tokenToEthSwitch() external {
+    function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
+        uint256 tokenBalance = token.balanceOf(address(this));
+        uint256 weiOut = _tokenAmount.mul(address(this).balance).div(tokenBalance);
+        require(weiOut >= _minWeiOut, "Not enough token provided");
+        // require(enough volume in pools)
+        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
 
+        msg.sender.transfer(weiOut);
     }
 }

@@ -55,4 +55,11 @@ contract TestUniswitchPool {
 
         Assert.equal(userFinalBalance - userInitialBalance, 9801, "Bad token amount");
     }
+
+    function testTokenToEthSwitch() public payable {
+        // uint256 userInitialBalance = address(this).balance;
+        pool.tokenToEthSwitch(10000, 0);
+        // uint256 userFinalBalance = address(this).balance;
+        // Assert.equal(userFinalBalance - userInitialBalance, 10406, "Bad wei amount");
+    }
 }
