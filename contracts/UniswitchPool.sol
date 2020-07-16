@@ -1,7 +1,12 @@
 //SPDX-License-Identifier: MIT
 
-// add fee
-// fix rate issue
+/* TO DO
+- add fee
+
+DONE
+
+added check for pool volume
+*/
 
 pragma solidity ^0.6.9;
 
@@ -56,10 +61,11 @@ contract UniswitchPool is Debug {
 
     function ethToTokenSwitch(uint256 _minTokenOut) external payable {
         uint256 _tokenBalance = token.balanceOf(address(this));
-        uint256 _tokenOut = msg.value.mul(_tokenBalance).div(address(this).balance);
+        uint256 _fee = msg.value.div(5); // 0.2%
+        uint256 _tokenOut = msg.value.sub(_fee).mul(_tokenBalance).div(address(this).balance);
 
         require(_tokenOut >= _minTokenOut, "Not enough wei provided");
-        // require(enough volume in pools)
+        require(_tokenOut <= _tokenBalance, "Not enough volume in the pool");
         require(token.transfer(msg.sender, _tokenOut), "Error in token transfer");
 
         emit EthToTokenSwitch(msg.sender, address(token), msg.value, _tokenOut);
@@ -67,9 +73,11 @@ contract UniswitchPool is Debug {
 
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
         uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
-        uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(_tokenBalance);
+        uint256 _fee = _tokenAmount.div(5); // 0.2%
+        uint256 _weiOut = _tokenAmount.sub(_fee).mul(address(this).balance).div(_tokenBalance);
+
         require(_weiOut >= _minWeiOut, "Not enough token provided");
-        // require(enough volume in pools)
+        require(_weiOut <= address(this).balance, "Not enough volume in the pool");
         require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
 
         msg.sender.transfer(_weiOut);

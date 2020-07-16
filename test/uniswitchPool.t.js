@@ -1,3 +1,7 @@
+/* TO DO
+- write unhappy paths
+*/
+
 const TestToken = artifacts.require('TestToken');
 const UniswitchFactory = artifacts.require('UniswitchFactory');
 const UniswitchPool = artifacts.require('UniswitchPool');
@@ -38,7 +42,8 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * amountSwitched);
+        const fee = amountSwitched * 0.2;
+        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
 
         const initialTokenBalance = await token.balanceOf(accounts[0]);
         const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
@@ -56,7 +61,8 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * amountSwitched);
+        const fee = amountSwitched * 0.2;
+        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
 
         const initialTokenBalance = await token.balanceOf(accounts[0]);
         const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
@@ -74,7 +80,8 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * amountSwitched);
+        const fee = amountSwitched * 0.2;
+        const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * (amountSwitched - fee));
 
         const tx = await pool.tokenToEthSwitch(10000, 0);
 
