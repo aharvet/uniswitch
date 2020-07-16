@@ -34,26 +34,53 @@ contract('UniswitchPool', accounts => {
     });
 
     it('should switch eth to token', async () => {
+        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
+        const poolToken = (await token.balanceOf(pool.address)).toNumber();
+
+        const amountSwitched = 10000;
+        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * amountSwitched);
+
         const initialTokenBalance = await token.balanceOf(accounts[0]);
-        await pool.ethToTokenSwitch(0, { value: 10000 });
+        const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
         const finalTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), 10000);
+        const { event, args } = tx.logs[0];
+
+        assert.equal(event, 'EthToTokenSwitch');
+        assert.equal(args[3], expectedTokenAmount);
+        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
     });
 
     it('should switch eth to token a second time', async () => {
+        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
+        const poolToken = (await token.balanceOf(pool.address)).toNumber();
+
+        const amountSwitched = 10000;
+        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * amountSwitched);
+
         const initialTokenBalance = await token.balanceOf(accounts[0]);
-        await pool.ethToTokenSwitch(0, { value: 10000 });
+        const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
         const finalTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), 9801);
+        const { event, args } = tx.logs[0];
+
+        assert.equal(event, 'EthToTokenSwitch');
+        assert.equal(args[3], expectedTokenAmount);
+        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
     });
 
     it('should switch token to eth', async () => {
-        const initialTokenBalance = await token.balanceOf(pool.address);
-        await pool.tokenToEthSwitch(10000, 0);
-        const finalTokenBalance = await token.balanceOf(pool.address);
+        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
+        const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
-        assert.equal(finalTokenBalance - initialTokenBalance, 10000);
+        const amountSwitched = 10000;
+        const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * amountSwitched);
+
+        const tx = await pool.tokenToEthSwitch(10000, 0);
+
+        const { event, args } = tx.logs[0];
+
+        assert.equal(event, 'TokenToEthSwitch');
+        assert.equal(args[2], expectedTokenAmount);
     });
 });

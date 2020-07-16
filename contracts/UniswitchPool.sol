@@ -1,5 +1,8 @@
 //SPDX-License-Identifier: MIT
 
+// add fee
+// fix rate issue
+
 pragma solidity ^0.6.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,6 +27,7 @@ contract UniswitchPool is Debug {
 
     event PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount);
     event EthToTokenSwitch(address user, address token, uint256 weiAmount, uint256 tokenAmount);
+    event TokenToEthSwitch(address user, address token, uint256 weiAmount, uint256 tokenAmount);
 
     constructor(address _tokenAddr) public {
         require(_tokenAddr != address(0), "Zero address provided");
@@ -51,24 +55,25 @@ contract UniswitchPool is Debug {
     }
 
     function ethToTokenSwitch(uint256 _minTokenOut) external payable {
-        uint256 weiBalance = address(this).balance.sub(msg.value);
-        uint256 tokenBalance = token.balanceOf(address(this));
-        uint256 tokenOut = msg.value.mul(tokenBalance).div(weiBalance);
+        uint256 _tokenBalance = token.balanceOf(address(this));
+        uint256 _tokenOut = msg.value.mul(_tokenBalance).div(address(this).balance);
 
-        require(tokenOut >= _minTokenOut, "Not enough wei provided");
+        require(_tokenOut >= _minTokenOut, "Not enough wei provided");
         // require(enough volume in pools)
-        require(token.transfer(msg.sender, tokenOut), "Error in token transfer");
+        require(token.transfer(msg.sender, _tokenOut), "Error in token transfer");
 
-        emit EthToTokenSwitch(msg.sender, address(token), msg.value, tokenOut);
+        emit EthToTokenSwitch(msg.sender, address(token), msg.value, _tokenOut);
     }
 
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
-        uint256 tokenBalance = token.balanceOf(address(this));
-        uint256 weiOut = _tokenAmount.mul(address(this).balance).div(tokenBalance);
-        require(weiOut >= _minWeiOut, "Not enough token provided");
+        uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
+        uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(_tokenBalance);
+        require(_weiOut >= _minWeiOut, "Not enough token provided");
         // require(enough volume in pools)
         require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
 
-        msg.sender.transfer(weiOut);
+        msg.sender.transfer(_weiOut);
+
+        emit TokenToEthSwitch(msg.sender, address(token), _weiOut, _tokenAmount);
     }
 }
