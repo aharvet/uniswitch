@@ -20,7 +20,7 @@ contract('UniswitchPool', accounts => {
         const poolAddr = await factory.tokenToPool(token.address);
         pool = await UniswitchPool.at(poolAddr);
 
-        token.approve(pool.address, web3.utils.toWei('1', 'ether'))
+        token.approve(pool.address, web3.utils.toWei('1', 'ether'));
     });
 
     it('should initialize pool', async () => {
@@ -42,7 +42,7 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.2;
+        const fee = amountSwitched * 0.002;
         const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
 
         const initialTokenBalance = await token.balanceOf(accounts[0]);
@@ -52,7 +52,7 @@ contract('UniswitchPool', accounts => {
         const { event, args } = tx.logs[0];
 
         assert.equal(event, 'EthToTokenSwitch');
-        assert.equal(args[3], expectedTokenAmount);
+        assert.equal(args[3].toNumber(), expectedTokenAmount);
         assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
     });
 
@@ -61,7 +61,7 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.2;
+        const fee = amountSwitched * 0.002;
         const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
 
         const initialTokenBalance = await token.balanceOf(accounts[0]);
@@ -71,7 +71,7 @@ contract('UniswitchPool', accounts => {
         const { event, args } = tx.logs[0];
 
         assert.equal(event, 'EthToTokenSwitch');
-        assert.equal(args[3], expectedTokenAmount);
+        assert.equal(args[3].toNumber(), expectedTokenAmount);
         assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
     });
 
@@ -80,7 +80,7 @@ contract('UniswitchPool', accounts => {
         const poolToken = (await token.balanceOf(pool.address)).toNumber();
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.2;
+        const fee = amountSwitched * 0.002;
         const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * (amountSwitched - fee));
 
         const tx = await pool.tokenToEthSwitch(10000, 0);

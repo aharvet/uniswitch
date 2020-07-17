@@ -81,7 +81,7 @@ contract UniswitchPool is Debug {
 
     function ethToTokenSwitch(uint256 _minTokenOut) external payable {
         uint256 _tokenBalance = token.balanceOf(address(this));
-        uint256 _fee = msg.value.div(5); // 0.2%
+        uint256 _fee = msg.value.div(500); // 0.2%
         uint256 _tokenOut = msg.value.sub(_fee).mul(_tokenBalance).div(address(this).balance);
 
         require(_tokenOut >= _minTokenOut, "Not enough wei provided");
@@ -93,7 +93,7 @@ contract UniswitchPool is Debug {
 
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
         uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
-        uint256 _fee = _tokenAmount.div(5); // 0.2%
+        uint256 _fee = _tokenAmount.div(500); // 0.2%
         uint256 _weiOut = _tokenAmount.sub(_fee).mul(address(this).balance).div(_tokenBalance);
 
         require(_weiOut >= _minWeiOut, "Not enough token provided");
