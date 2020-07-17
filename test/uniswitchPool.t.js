@@ -84,10 +84,57 @@ contract('UniswitchPool', accounts => {
         const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * (amountSwitched - fee));
 
         const tx = await pool.tokenToEthSwitch(10000, 0);
-
         const { event, args } = tx.logs[0];
 
         assert.equal(event, 'TokenToEthSwitch');
         assert.equal(args[2], expectedTokenAmount);
+    });
+
+    it('should invest liquidity', async () => {
+        const weiInvested = 10000;
+
+        const initialWeiBalance = await web3.eth.getBalance(pool.address);
+        const initialTokenBalance = await token.balanceOf(pool.address);
+        const initialUserShares = await pool.shares(accounts[0]);
+        const initialTotalShares = await pool.totalShares();
+
+        await pool.investLiquidity(0, { value: weiInvested});
+
+        const finalWeiBalance = await web3.eth.getBalance(pool.address);
+        const finalTokenBalance = await token.balanceOf(pool.address);
+        const finalUserShares = await pool.shares(accounts[0]);
+        const finalTotalShares = await pool.totalShares();
+
+        const expectedShareAmount = Math.floor(weiInvested * initialTotalShares / initialWeiBalance);
+        const expectedTokenAmount = Math.floor(initialTokenBalance / initialTotalShares) * expectedShareAmount;
+
+        assert.equal(finalWeiBalance - initialWeiBalance, weiInvested);
+        assert.equal(finalTokenBalance - initialTokenBalance, expectedTokenAmount);
+        assert.equal(finalUserShares - initialUserShares, expectedShareAmount);
+        assert.equal(finalTotalShares - initialTotalShares, expectedShareAmount);
+    });
+
+    it('should divest liquidity', async () => {
+        const weiDivested = 8000;
+
+        const initialWeiBalance = await web3.eth.getBalance(pool.address);
+        const initialTokenBalance = await token.balanceOf(pool.address);
+        const initialUserShares = await pool.shares(accounts[0]);
+        const initialTotalShares = await pool.totalShares();
+
+        await pool.divestLiquidity(weiDivested, 0);
+
+        const finalWeiBalance = await web3.eth.getBalance(pool.address);
+        const finalTokenBalance = await token.balanceOf(pool.address);
+        const finalUserShares = await pool.shares(accounts[0]);
+        const finalTotalShares = await pool.totalShares();
+
+        const expectedShareAmount = Math.floor(weiDivested * initialTotalShares / initialWeiBalance);
+        const expectedTokenAmount = Math.floor(initialTokenBalance / initialTotalShares) * expectedShareAmount;
+
+        assert.equal(initialWeiBalance - finalWeiBalance, weiDivested);
+        assert.equal(initialTokenBalance - finalTokenBalance, expectedTokenAmount);
+        assert.equal(initialUserShares - finalUserShares, expectedShareAmount);
+        assert.equal(initialTotalShares - finalTotalShares, expectedShareAmount);
     });
 });

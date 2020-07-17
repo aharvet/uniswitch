@@ -1,11 +1,7 @@
 //SPDX-License-Identifier: MIT
 
 /* TO DO
-- add fee
 
-DONE
-
-added check for pool volume
 */
 
 pragma solidity ^0.6.9;
@@ -33,6 +29,8 @@ contract UniswitchPool is Debug {
     event PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount);
     event EthToTokenSwitch(address user, address token, uint256 weiAmount, uint256 tokenAmount);
     event TokenToEthSwitch(address user, address token, uint256 weiAmount, uint256 tokenAmount);
+    event InvestLiquidity(address user, address token, uint256 weiAmount, uint256 tokenAmount);
+    event DivestLiquidity(address user, address token, uint256 weiAmount, uint256 tokenAmount);
 
     constructor(address _tokenAddr) public {
         require(_tokenAddr != address(0), "Zero address provided");
@@ -46,17 +44,39 @@ contract UniswitchPool is Debug {
         shares[msg.sender] = 1000;
         totalShares = 1000;
 
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
+        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
 
         emit PoolInitialized(address(this), address(token), msg.value, _tokenAmount);
     }
 
-    function investLiquidity() external payable initialized {
+    function investLiquidity(uint256 _minShare) external payable initialized {
+        uint _shareAmount = msg.value.mul(totalShares).div(address(this).balance);
+        require(_shareAmount >= _minShare, "Not enough liquidity provided");
 
+        uint256 _tokenPerShare = token.balanceOf(address(this)).div(totalShares);
+        uint _tokenAmount = _tokenPerShare.mul(_shareAmount);
+
+        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
+
+        shares[msg.sender] = shares[msg.sender].add(_shareAmount);
+        totalShares = totalShares.add(_shareAmount);
+
+        emit InvestLiquidity(msg.sender, address(token), msg.value, _tokenAmount);
     }
 
-    function divestLiquidity() external initialized {
+    function divestLiquidity(uint256 _weiAmount, uint256 _minToken) external {
+        uint256 _withdrewShareAmount = _weiAmount.mul(totalShares).div(address(this).balance);
+        uint256 _tokenPerShare = token.balanceOf(address(this)).div(totalShares);
+        uint256 _tokenOut = _withdrewShareAmount.mul(_tokenPerShare);
+        require(_tokenOut >= _minToken);
 
+        require(token.transfer(msg.sender, _tokenOut), "Error during token transfer");
+        msg.sender.transfer(_weiAmount);
+
+        shares[msg.sender] = shares[msg.sender].sub(_withdrewShareAmount);
+        totalShares = totalShares.sub(_withdrewShareAmount);
+
+        emit DivestLiquidity(msg.sender, address(token), _weiAmount, _tokenOut);
     }
 
     function ethToTokenSwitch(uint256 _minTokenOut) external payable {
@@ -66,7 +86,7 @@ contract UniswitchPool is Debug {
 
         require(_tokenOut >= _minTokenOut, "Not enough wei provided");
         require(_tokenOut <= _tokenBalance, "Not enough volume in the pool");
-        require(token.transfer(msg.sender, _tokenOut), "Error in token transfer");
+        require(token.transfer(msg.sender, _tokenOut), "Error during token transfer");
 
         emit EthToTokenSwitch(msg.sender, address(token), msg.value, _tokenOut);
     }
@@ -78,7 +98,7 @@ contract UniswitchPool is Debug {
 
         require(_weiOut >= _minWeiOut, "Not enough token provided");
         require(_weiOut <= address(this).balance, "Not enough volume in the pool");
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error in token transfer");
+        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
 
         msg.sender.transfer(_weiOut);
 
