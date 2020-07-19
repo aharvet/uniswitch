@@ -2,6 +2,8 @@
 - write unhappy paths
 */
 
+const { getBalances, getPoolShares, computeSwitchOutAmount, computeShareFlow } = require('./tools');
+
 const TestToken = artifacts.require('TestToken');
 const UniswitchFactory = artifacts.require('UniswitchFactory');
 const UniswitchPool = artifacts.require('UniswitchPool');
@@ -26,10 +28,8 @@ contract('UniswitchPool', accounts => {
     it('should initialize pool', async () => {
         await pool.initializePool(1000000, { value: 1000000 });
 
-        const weiBalance = await web3.eth.getBalance(pool.address);
-        const tokenBalance = await token.balanceOf(pool.address);
-        const userShares = await pool.shares(accounts[0]);
-        const totalShares = await pool.totalShares();
+        const [weiBalance, tokenBalance] = await getBalances(pool.address, token);
+        const [userShares, totalShares] = await getPoolShares(accounts[0], pool);
 
         assert.equal(weiBalance, 1000000);
         assert.equal(tokenBalance.toNumber(), 1000000);
@@ -38,75 +38,68 @@ contract('UniswitchPool', accounts => {
     });
 
     it('should switch eth to token', async () => {
-        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
-        const poolToken = (await token.balanceOf(pool.address)).toNumber();
+        const [initialPoolWeiBalance, initialPoolTokenBalance] = await getBalances(pool.address, token);
+        const initialUserTokenBalance = await token.balanceOf(accounts[0]);
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.002;
-        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
+        const expectedTokenAmount = computeSwitchOutAmount(amountSwitched, parseInt(initialPoolWeiBalance), initialPoolTokenBalance);
 
-        const initialTokenBalance = await token.balanceOf(accounts[0]);
-        const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
-        const finalTokenBalance = await token.balanceOf(accounts[0]);
+        await pool.ethToTokenSwitch(0, { value: amountSwitched });
 
-        const { event, args } = tx.logs[0];
+        const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
+        const finalUserTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(event, 'EthToTokenSwitch');
-        assert.equal(args[3].toNumber(), expectedTokenAmount);
-        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
+        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched);
+        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount)
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount);
     });
 
     it('should switch eth to token a second time', async () => {
-        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
-        const poolToken = (await token.balanceOf(pool.address)).toNumber();
+        const [initialPoolWeiBalance, initialPoolTokenBalance] = await getBalances(pool.address, token);
+        const initialUserTokenBalance = await token.balanceOf(accounts[0]);
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.002;
-        const expectedTokenAmount = Math.floor(poolToken / (poolWei + amountSwitched) * (amountSwitched - fee));
+        const expectedTokenAmount = computeSwitchOutAmount(amountSwitched, parseInt(initialPoolWeiBalance), initialPoolTokenBalance);
 
-        const initialTokenBalance = await token.balanceOf(accounts[0]);
-        const tx = await pool.ethToTokenSwitch(0, { value: amountSwitched });
-        const finalTokenBalance = await token.balanceOf(accounts[0]);
+        await pool.ethToTokenSwitch(0, { value: amountSwitched });
 
-        const { event, args } = tx.logs[0];
+        const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
+        const finalUserTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(event, 'EthToTokenSwitch');
-        assert.equal(args[3].toNumber(), expectedTokenAmount);
-        assert.equal(finalTokenBalance.sub(initialTokenBalance).toNumber(), expectedTokenAmount);
+        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched);
+        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount)
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount);
     });
 
     it('should switch token to eth', async () => {
-        const poolWei = parseInt(await web3.eth.getBalance(pool.address));
-        const poolToken = (await token.balanceOf(pool.address)).toNumber();
+        const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
+        const initialUserTokenBalance = await token.balanceOf(accounts[0]);
 
         const amountSwitched = 10000;
-        const fee = amountSwitched * 0.002;
-        const expectedTokenAmount = Math.floor(poolWei / (poolToken + amountSwitched) * (amountSwitched - fee));
+        const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, initialTokenBalance.toNumber(), initialWeiBalance);
 
-        const tx = await pool.tokenToEthSwitch(10000, 0);
-        const { event, args } = tx.logs[0];
+        await pool.tokenToEthSwitch(10000, 0);
 
-        assert.equal(event, 'TokenToEthSwitch');
-        assert.equal(args[2], expectedTokenAmount);
+        const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
+        const finalUserTokenBalance = await token.balanceOf(accounts[0]);
+
+        assert.equal(finalTokenBalance - initialTokenBalance, amountSwitched)
+        assert.equal(finalWeiBalance - initialWeiBalance, -expectedWeiAmount);
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), -amountSwitched);
     });
 
     it('should invest liquidity', async () => {
         const weiInvested = 10000;
 
-        const initialWeiBalance = await web3.eth.getBalance(pool.address);
-        const initialTokenBalance = await token.balanceOf(pool.address);
-        const initialUserShares = await pool.shares(accounts[0]);
-        const initialTotalShares = await pool.totalShares();
+        const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
+        const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
+
+        const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(weiInvested, initialWeiBalance, initialTokenBalance, initialTotalShares);
 
         await pool.investLiquidity(0, { value: weiInvested});
 
-        const finalWeiBalance = await web3.eth.getBalance(pool.address);
-        const finalTokenBalance = await token.balanceOf(pool.address);
-        const finalUserShares = await pool.shares(accounts[0]);
-        const finalTotalShares = await pool.totalShares();
-
-        const expectedShareAmount = Math.floor(weiInvested * initialTotalShares / initialWeiBalance);
-        const expectedTokenAmount = Math.floor(initialTokenBalance / initialTotalShares) * expectedShareAmount;
+        const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
+        const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
 
         assert.equal(finalWeiBalance - initialWeiBalance, weiInvested);
         assert.equal(finalTokenBalance - initialTokenBalance, expectedTokenAmount);
@@ -117,20 +110,15 @@ contract('UniswitchPool', accounts => {
     it('should divest liquidity', async () => {
         const weiDivested = 8000;
 
-        const initialWeiBalance = await web3.eth.getBalance(pool.address);
-        const initialTokenBalance = await token.balanceOf(pool.address);
-        const initialUserShares = await pool.shares(accounts[0]);
-        const initialTotalShares = await pool.totalShares();
+        const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
+        const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
+
+        const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(weiDivested, initialWeiBalance, initialTokenBalance, initialTotalShares);
 
         await pool.divestLiquidity(weiDivested, 0);
 
-        const finalWeiBalance = await web3.eth.getBalance(pool.address);
-        const finalTokenBalance = await token.balanceOf(pool.address);
-        const finalUserShares = await pool.shares(accounts[0]);
-        const finalTotalShares = await pool.totalShares();
-
-        const expectedShareAmount = Math.floor(weiDivested * initialTotalShares / initialWeiBalance);
-        const expectedTokenAmount = Math.floor(initialTokenBalance / initialTotalShares) * expectedShareAmount;
+        const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
+        const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
 
         assert.equal(initialWeiBalance - finalWeiBalance, weiDivested);
         assert.equal(initialTokenBalance - finalTokenBalance, expectedTokenAmount);

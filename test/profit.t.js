@@ -23,20 +23,14 @@ contract('UniswitchPool', accounts => {
     it('should provide a profit', async () => {
         await pool.initializePool(1000000, { from: accounts[1], value: 1000000 });
 
-        const initialWeiBalance = web3.utils.toBN(
-            await web3.eth.getBalance(pool.address)
-        );
+        const initialWeiBalance = await web3.eth.getBalance(pool.address);
 
         await pool.ethToTokenSwitch(0, { from: accounts[2], value: 10000 });
         const tokenAmount = await token.balanceOf(accounts[2]);
         await pool.tokenToEthSwitch(tokenAmount, 0, { from: accounts[2] });
 
-        const poolEth = await web3.eth.getBalance(pool.address);
+        const finalWeiBalance = await web3.eth.getBalance(pool.address);
 
-        const finalWeiBalance = web3.utils.toBN(
-            await web3.eth.getBalance(pool.address)
-        );
-
-        assert(finalWeiBalance.sub(initialWeiBalance).toNumber() > 0);
+        assert(finalWeiBalance - initialWeiBalance > 0);
     });
 });
