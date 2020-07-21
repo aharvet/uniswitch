@@ -8,7 +8,7 @@ contract('UniswitchPool', accounts => {
     let pool = null;
 
     before(async () => {
-        token = await TestToken.deployed();
+        token = await TestToken.new('Test Token', 'TTK');
         token.mint(accounts[1], web3.utils.toWei('1', 'ether'));
 
         factory = await UniswitchFactory.deployed();

@@ -1,7 +1,3 @@
-/* TO DO
-- write unhappy paths
-*/
-
 const { getBalances, getPoolShares, computeSwitchOutAmount, computeShareFlow } = require('./tools');
 
 const TestToken = artifacts.require('TestToken');
@@ -14,8 +10,8 @@ contract('UniswitchPool', accounts => {
     let pool = null;
 
     before(async () => {
-        token = await TestToken.deployed();
-        token.mint(accounts[0], web3.utils.toWei('1', 'ether'));
+        token = await TestToken.new('Test Token', 'TTK');
+        await token.mint(accounts[0], web3.utils.toWei('1', 'ether'));
 
         factory = await UniswitchFactory.deployed();
         await factory.launchPool(token.address);

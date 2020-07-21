@@ -1,6 +1,7 @@
 node_modules/
 build/
 flattened/
+notes.txt
 
 test/TestUniswitchFactory.sol
 test/TestUniswitchPool.sol
