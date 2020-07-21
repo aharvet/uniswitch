@@ -1,0 +1,23 @@
+const TestToken = artifacts.require('TestToken');
+const UniswitchFactory = artifacts.require('UniswitchFactory');
+
+contract('UniswitchFactory', accounts => {
+    let token = null;
+    let factory = null;
+
+    before(async () => {
+        token = await TestToken.new('Test Token', 'TTK');
+        factory = await UniswitchFactory.deployed();
+    });
+
+    it('should launch a pool', async () => {
+        await factory.launchPool(token.address);
+
+        const tokenStored = await factory.tokens(0);
+        const fromTokenToPool = await factory.tokenToPool(token.address);
+        const fromPoolToToken = await factory.poolToToken(fromTokenToPool);
+
+        assert.equal(tokenStored, token.address , 'wrong token address');
+        assert.equal(fromPoolToToken, token.address, 'wrong pool to token');
+    });
+});

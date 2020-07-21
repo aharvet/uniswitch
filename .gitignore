@@ -1,8 +1,7 @@
 node_modules/
 build/
 flattened/
+depreciated/
 notes.txt
 
-test/TestUniswitchFactory.sol
-test/TestUniswitchPool.sol
 contracts/interfaces
