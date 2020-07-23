@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.9;
+pragma solidity 0.6.12;
 
 import "./UniswitchPool.sol";
 
@@ -12,14 +12,12 @@ contract UniswitchFactory {
 
     event PoolLaunched(address token, address pool);
 
-    function launchPool(address _token) external returns(address){
+    function launchPool(address _token) external {
         UniswitchPool _newPool = new UniswitchPool(_token);
         tokens.push(_token);
         tokenToPool[_token] = address(_newPool);
         poolToToken[address(_newPool)] = _token;
 
         emit PoolLaunched(_token, address(_newPool));
-
-        return address(_newPool);
     }
 }
