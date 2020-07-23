@@ -17,7 +17,7 @@ contract('UniswitchFactory', accounts => {
         const fromTokenToPool = await factory.tokenToPool(token.address);
         const fromPoolToToken = await factory.poolToToken(fromTokenToPool);
 
-        assert.equal(tokenStored, token.address , 'wrong token address');
-        assert.equal(fromPoolToToken, token.address, 'wrong pool to token');
+        assert.equal(tokenStored, token.address , 'Wrong token address');
+        assert.equal(fromPoolToToken, token.address, 'Wrong pool to token');
     });
 });

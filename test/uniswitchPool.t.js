@@ -27,10 +27,10 @@ contract('UniswitchPool', accounts => {
         const [weiBalance, tokenBalance] = await getBalances(pool.address, token);
         const [userShares, totalShares] = await getPoolShares(accounts[0], pool);
 
-        assert.equal(weiBalance, 1000000);
-        assert.equal(tokenBalance.toNumber(), 1000000);
-        assert.equal(userShares, 1000);
-        assert.equal(totalShares, 1000);
+        assert.equal(weiBalance, 1000000, 'Wrong wei balance');
+        assert.equal(tokenBalance.toNumber(), 1000000, 'Wrong token balance');
+        assert.equal(userShares, 1000, 'Wrong user share amount');
+        assert.equal(totalShares, 1000, 'Wrong total share amount');
     });
 
     it('should switch eth to token', async () => {
@@ -45,9 +45,9 @@ contract('UniswitchPool', accounts => {
         const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
         const finalUserTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched);
-        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount)
-        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount);
+        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched, 'Wrong pool wei final amount');
+        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount, 'Wrong pool token final amount');
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount, 'Wrong user token final amount');
     });
 
     it('should switch eth to token a second time', async () => {
@@ -62,9 +62,9 @@ contract('UniswitchPool', accounts => {
         const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
         const finalUserTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched);
-        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount)
-        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount);
+        assert.equal(finalPoolWeiBalance - initialPoolWeiBalance, amountSwitched, 'Wrong pool wei final amount');
+        assert.equal(finalPoolTokenBalance - initialPoolTokenBalance, -expectedTokenAmount, 'Wrong pool token final amount')
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), expectedTokenAmount, 'Wrong user token final amount');
     });
 
     it('should switch token to eth', async () => {
@@ -79,9 +79,9 @@ contract('UniswitchPool', accounts => {
         const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
         const finalUserTokenBalance = await token.balanceOf(accounts[0]);
 
-        assert.equal(finalTokenBalance - initialTokenBalance, amountSwitched)
-        assert.equal(finalWeiBalance - initialWeiBalance, -expectedWeiAmount);
-        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), -amountSwitched);
+        assert.equal(finalTokenBalance - initialTokenBalance, amountSwitched, 'Wrong pool token final amount')
+        assert.equal(finalWeiBalance - initialWeiBalance, -expectedWeiAmount, 'Wrong pool wei final amount');
+        assert.equal(finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(), -amountSwitched, 'Wrong user token final amount');
     });
 
     it('should invest liquidity', async () => {
@@ -97,10 +97,10 @@ contract('UniswitchPool', accounts => {
         const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
         const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
 
-        assert.equal(finalWeiBalance - initialWeiBalance, weiInvested);
-        assert.equal(finalTokenBalance - initialTokenBalance, expectedTokenAmount);
-        assert.equal(finalUserShares - initialUserShares, expectedShareAmount);
-        assert.equal(finalTotalShares - initialTotalShares, expectedShareAmount);
+        assert.equal(finalWeiBalance - initialWeiBalance, weiInvested, 'Wrong pool wei final amount');
+        assert.equal(finalTokenBalance - initialTokenBalance, expectedTokenAmount, 'Wrong pool token final amount');
+        assert.equal(finalUserShares - initialUserShares, expectedShareAmount, 'Wrong user share final amount');
+        assert.equal(finalTotalShares - initialTotalShares, expectedShareAmount, 'Wrong total share final amount');
     });
 
     it('should divest liquidity', async () => {
@@ -116,9 +116,9 @@ contract('UniswitchPool', accounts => {
         const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
         const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
 
-        assert.equal(initialWeiBalance - finalWeiBalance, weiDivested);
-        assert.equal(initialTokenBalance - finalTokenBalance, expectedTokenAmount);
-        assert.equal(initialUserShares - finalUserShares, expectedShareAmount);
-        assert.equal(initialTotalShares - finalTotalShares, expectedShareAmount);
+        assert.equal(initialWeiBalance - finalWeiBalance, weiDivested, 'Wrong pool wei final amount');
+        assert.equal(initialTokenBalance - finalTokenBalance, expectedTokenAmount, 'Wrong pool token final amount');
+        assert.equal(initialUserShares - finalUserShares, expectedShareAmount, 'Wrong user share final amount');
+        assert.equal(initialTotalShares - finalTotalShares, expectedShareAmount, 'Wrong total share final amount');
     });
 });

@@ -31,6 +31,6 @@ contract('UniswitchPool', accounts => {
 
         const finalWeiBalance = await web3.eth.getBalance(pool.address);
 
-        assert(finalWeiBalance - initialWeiBalance > 0);
+        assert(finalWeiBalance - initialWeiBalance > 0, "No extra wei in final balance");
     });
 });

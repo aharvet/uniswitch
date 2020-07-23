@@ -49,11 +49,11 @@ contract('Token to token switch', accounts => {
         const [finalPool2WeiBalance, finalPool2TokenBalance] = await getBalances(pool2.address, token2);
         const [finalUserToken1Balance, finalUserToken2Balance] = await getTokensBalances(accounts[1], [token, token2]);
 
-        assert.equal(finalPool1WeiBalance - initialPool1WeiBalance, -expectedWeiAmount, 'final pool1 wei balance wrong');
-        assert.equal(finalPool1TokenBalance.sub(initialPool1TokenBalance).toNumber(), amountSwitched, 'final pool1 token balance wrong');
-        assert.equal(finalPool2WeiBalance - initialPool2TokenBalance, expectedWeiAmount, 'final pool2 wei balance wrong');
-        assert.equal(finalPool2TokenBalance.sub(initialPool2TokenBalance).toNumber(), -expectedTokenAmount, 'final pool2 token balance wrong');
-        assert.equal(finalUserToken1Balance.sub(initialUserToken1Balance).toNumber(), -amountSwitched, 'final user token1 wrong');
-        assert.equal(finalUserToken2Balance.sub(initialUserToken2Balance).toNumber(), expectedTokenAmount, 'final user token2 wrong');
+        assert.equal(finalPool1WeiBalance - initialPool1WeiBalance, -expectedWeiAmount, 'Wrong pool1 wei final balance');
+        assert.equal(finalPool1TokenBalance.sub(initialPool1TokenBalance).toNumber(), amountSwitched, 'Wrong pool1 token final balance');
+        assert.equal(finalPool2WeiBalance - initialPool2TokenBalance, expectedWeiAmount, 'Wrong pool2 wei final balance');
+        assert.equal(finalPool2TokenBalance.sub(initialPool2TokenBalance).toNumber(), -expectedTokenAmount, 'Wrong pool2 token final balance');
+        assert.equal(finalUserToken1Balance.sub(initialUserToken1Balance).toNumber(), -amountSwitched, 'Wrong user token1 final balance');
+        assert.equal(finalUserToken2Balance.sub(initialUserToken2Balance).toNumber(), expectedTokenAmount, 'Wrong user token2 final balance');
     });
 });

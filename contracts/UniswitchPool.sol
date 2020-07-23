@@ -5,10 +5,9 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./IUniswitchFactory.sol";
-import "./test/Debug.sol";
 
 
-contract UniswitchPool is Debug {
+contract UniswitchPool {
     using SafeMath for uint256;
 
     IUniswitchFactory private factory;
@@ -87,13 +86,7 @@ contract UniswitchPool is Debug {
     }
 
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
-        uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
-        uint256 _fee = _tokenAmount.div(500); // 0.2%
-        uint256 _weiOut = _tokenAmount.sub(_fee).mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
-
-        require(_weiOut >= _minWeiOut, "Not enough token provided");
-        require(_weiOut <= address(this).balance, "Not enough volume in the pool");
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
+        uint _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut, true);
 
         msg.sender.transfer(_weiOut);
 
@@ -101,14 +94,11 @@ contract UniswitchPool is Debug {
     }
 
     function tokenToTokenSwitch(uint256 _token1Amount, uint256 _minToken2Amount, address _token2Addr) external {
-        uint256 _tokenBalance = token.balanceOf(address(this)).add(_token1Amount);
-        uint256 _weiOut = _token1Amount.mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
-        require(_weiOut <= address(this).balance, "Not enough volume in the pool");
+        uint _weiOut = tokenInHandler(msg.sender, _token1Amount, 0, false);
 
         address _poolToken2Addr = factory.tokenToPool(_token2Addr);
         UniswitchPool _poolToken2 = UniswitchPool(_poolToken2Addr);
 
-        require(token.transferFrom(msg.sender, address(this), _token1Amount), "Error during token transfer");
         require(_poolToken2.tokenToTokenIn{ value: _weiOut }(msg.sender, _minToken2Amount), "Error during swap on second pool");
 
         emit TokenToTokenSwitchedPoolA(msg.sender, address(token), _token2Addr, _token1Amount, _weiOut);
@@ -132,5 +122,20 @@ contract UniswitchPool is Debug {
         require(token.transfer(_to, _tokenOut), "Error during token transfer");
 
         return _tokenOut;
+    }
+
+    function tokenInHandler(address _to, uint256 _tokenAmount, uint256 _minWeiOut, bool _doFee) private returns(uint256) {
+        uint256 _fee;
+        uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
+        if (_doFee) _fee = _tokenAmount.div(500); // 0.2%
+        else _fee = 0;
+        uint256 _weiOut = _tokenAmount.sub(_fee).mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
+
+        require(_weiOut >= _minWeiOut, "Not enough token provided");
+        require(_weiOut <= address(this).balance, "Not enough volume in the pool");
+
+        require(token.transferFrom(_to, address(this), _tokenAmount), "Error during token transfer");
+
+        return _weiOut;
     }
 }
