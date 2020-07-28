@@ -1,7 +1,7 @@
 const TestToken = artifacts.require('TestToken');
 const UniswitchFactory = artifacts.require('UniswitchFactory');
 
-contract('UniswitchFactory', accounts => {
+contract('UniswitchFactory', () => {
     let token = null;
     let factory = null;
 
