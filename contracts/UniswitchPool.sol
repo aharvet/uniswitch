@@ -44,7 +44,7 @@ contract UniswitchPool {
         shares[msg.sender] = 1000;
         totalShares = 1000;
 
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
+        token.transferFrom(msg.sender, address(this), _tokenAmount);
 
         emit PoolInitialized(address(this), address(token), msg.value, _tokenAmount);
     }
@@ -56,7 +56,7 @@ contract UniswitchPool {
         uint256 _tokenPerShare = token.balanceOf(address(this)).div(totalShares);
         uint _tokenAmount = _tokenPerShare.mul(_shareAmount);
 
-        require(token.transferFrom(msg.sender, address(this), _tokenAmount), "Error during token transfer");
+        token.transferFrom(msg.sender, address(this), _tokenAmount);
 
         shares[msg.sender] = shares[msg.sender].add(_shareAmount);
         totalShares = totalShares.add(_shareAmount);
@@ -70,7 +70,7 @@ contract UniswitchPool {
         uint256 _tokenOut = _withdrewShareAmount.mul(_tokenPerShare);
         require(_tokenOut >= _minToken, "Not enough token in return");
 
-        require(token.transfer(msg.sender, _tokenOut), "Error during token transfer");
+        token.transfer(msg.sender, _tokenOut);
         msg.sender.transfer(_weiAmount);
 
         shares[msg.sender] = shares[msg.sender].sub(_withdrewShareAmount);
@@ -99,7 +99,7 @@ contract UniswitchPool {
         address _poolToken2Addr = factory.tokenToPool(_token2Addr);
         UniswitchPool _poolToken2 = UniswitchPool(_poolToken2Addr);
 
-        require(_poolToken2.tokenToTokenIn{ value: _weiOut }(msg.sender, _minToken2Amount), "Error during swap on second pool");
+        _poolToken2.tokenToTokenIn{ value: _weiOut }(msg.sender, _minToken2Amount);
 
         emit TokenToTokenSwitchedPoolA(msg.sender, address(token), _token2Addr, _token1Amount, _weiOut);
     }
@@ -122,7 +122,7 @@ contract UniswitchPool {
             _tokenToToken ? "Not enough token provided" : "Not enough wei provided"
         );
 
-        require(token.transfer(_to, _tokenOut), "Error during token transfer");
+        token.transfer(_to, _tokenOut);
 
         return _tokenOut;
     }
@@ -135,7 +135,7 @@ contract UniswitchPool {
         uint256 _weiOut = _tokenAmount.sub(_fee).mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
 
         require(_weiOut >= _minWeiOut, "Not enough token provided");
-        require(token.transferFrom(_to, address(this), _tokenAmount), "Error during token transfer");
+        token.transferFrom(_to, address(this), _tokenAmount);
 
         return _weiOut;
     }
