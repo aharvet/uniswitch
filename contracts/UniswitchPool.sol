@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -108,8 +108,6 @@ contract UniswitchPool {
         uint256 _tokenOut = ethInHandler(_to, _minTokenOut, true);
 
         emit TokenToTokenSwitchedPoolB(_to, address(token), msg.value, _tokenOut);
-
-        return true;
     }
 
     function ethInHandler(address _to, uint256 _minTokenOut, bool _tokenToToken) private returns(uint256) {

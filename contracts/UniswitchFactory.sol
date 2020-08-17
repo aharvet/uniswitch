@@ -22,4 +22,8 @@ contract UniswitchFactory {
 
         emit PoolLaunched(_token, address(_newPool));
     }
+
+    function getTokens() public view returns(address[] memory) {
+        return tokens;
+    }
 }
