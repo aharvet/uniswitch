@@ -13,11 +13,11 @@ contract('UniswitchFactory', () => {
     it('should launch a pool', async () => {
         await factory.launchPool(token.address);
 
-        const tokenStored = await factory.tokens(0);
+        const tokenStored = await factory.getTokens();
         const fromTokenToPool = await factory.tokenToPool(token.address);
         const fromPoolToToken = await factory.poolToToken(fromTokenToPool);
 
-        assert.equal(tokenStored, token.address , 'Wrong token address');
+        assert.equal(tokenStored[0], token.address , 'Wrong token address');
         assert.equal(fromPoolToToken, token.address, 'Wrong pool to token');
     });
 });

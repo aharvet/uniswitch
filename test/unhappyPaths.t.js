@@ -52,6 +52,13 @@ contract('Unhappy Paths', accounts => {
         );
     });
 
+    it('should NOT swith token with tokenToTokenIn function', async () => {
+        await expectRevert(
+            pool.tokenToTokenIn(accounts[0], 0, { value: 100000 }),
+            'Sender is not a pool'
+        );
+    });
+
     it('should NOT switch eth to token if not enough token in return', async () => {
         await expectRevert(
             pool.ethToTokenSwitch(100000000, { value: 100 }),

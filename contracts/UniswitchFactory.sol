@@ -6,7 +6,7 @@ import "./UniswitchPool.sol";
 
 
 contract UniswitchFactory {
-    address[] public tokens;
+    address[] private tokens;
     mapping(address => address) public tokenToPool;
     mapping(address => address) public poolToToken;
 
@@ -23,7 +23,7 @@ contract UniswitchFactory {
         emit PoolLaunched(_token, address(_newPool));
     }
 
-    function getTokens() public view returns(address[] memory) {
+    function getTokens() external view returns(address[] memory) {
         return tokens;
     }
 }

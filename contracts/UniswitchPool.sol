@@ -16,13 +16,6 @@ contract UniswitchPool {
     mapping(address => uint256) public shares;
     uint256 public totalShares = 0;
 
-    modifier initialized() {
-        uint256 tokenBalance = token.balanceOf(address(this));
-
-        require(address(this).balance > 0 && tokenBalance > 0);
-        _;
-    }
-
     event PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount);
     event EthToTokenSwitched(address user, address token, uint256 weiIn, uint256 tokenOut);
     event TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut);
@@ -49,7 +42,10 @@ contract UniswitchPool {
         emit PoolInitialized(address(this), address(token), msg.value, _tokenAmount);
     }
 
-    function investLiquidity(uint256 _minShare) external payable initialized {
+    function investLiquidity(uint256 _minShare) external payable {
+        uint256 tokenBalance = token.balanceOf(address(this));
+        require(address(this).balance > 0 && tokenBalance > 0);
+
         uint _shareAmount = msg.value.mul(totalShares).div(address(this).balance); // computes the rate of share per wei inside the pool, and multiply it by the amount of wei invested
         require(_shareAmount >= _minShare, "Not enough liquidity provided");
 
@@ -104,7 +100,10 @@ contract UniswitchPool {
         emit TokenToTokenSwitchedPoolA(msg.sender, address(token), _token2Addr, _token1Amount, _weiOut);
     }
 
-    function tokenToTokenIn(address _to, uint256 _minTokenOut) external payable returns(bool) {
+    function tokenToTokenIn(address _to, uint256 _minTokenOut) external payable {
+        address tokenAssociated = factory.poolToToken(msg.sender);
+        require(tokenAssociated != address(0), "Sender is not a pool");
+
         uint256 _tokenOut = ethInHandler(_to, _minTokenOut, true);
 
         emit TokenToTokenSwitchedPoolB(_to, address(token), msg.value, _tokenOut);
