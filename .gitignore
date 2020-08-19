@@ -1,5 +1,5 @@
 node_modules/
 build/
-flattened/
 depreciated/
 contracts/test/Debug.sol
+secret.json
