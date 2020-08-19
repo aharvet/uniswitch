@@ -81,7 +81,7 @@ contract UniswitchPool {
         emit EthToTokenSwitched(msg.sender, address(token), msg.value, _tokenOut);
     }
 
-    function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external payable {
+    function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external {
         uint _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut, true);
 
         msg.sender.transfer(_weiOut);
