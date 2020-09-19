@@ -40,7 +40,7 @@ contract('Token to token switch', accounts => {
         const [initialUserToken1Balance, initialUserToken2Balance] = await getTokensBalances(accounts[1], [token, token2]);
 
         const amountSwitched = 10000;
-        const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, initialPool1TokenBalance.toNumber(), initialPool1WeiBalance, false);
+        const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, initialPool1TokenBalance.toNumber(), initialPool1WeiBalance);
         const expectedTokenAmount = computeSwitchOutAmount(expectedWeiAmount, parseInt(initialPool2WeiBalance), initialPool2TokenBalance.toNumber());
 
         await pool.tokenToTokenSwitch(amountSwitched, 0, token2.address, { from: accounts[1] });

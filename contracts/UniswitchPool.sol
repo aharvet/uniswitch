@@ -37,20 +37,20 @@ contract UniswitchPool {
         shares[msg.sender] = 1000;
         totalShares = 1000;
 
-        token.transferFrom(msg.sender, address(this), _tokenAmount);
-
         emit PoolInitialized(address(this), address(token), msg.value, _tokenAmount);
+
+        token.transferFrom(msg.sender, address(this), _tokenAmount);
     }
 
     function investLiquidity(uint256 _minShare) external payable {
         uint256 tokenBalance = token.balanceOf(address(this));
         require(address(this).balance > 0 && tokenBalance > 0);
 
-        uint _shareAmount = msg.value.mul(totalShares).div(address(this).balance); // computes the rate of share per wei inside the pool, and multiply it by the amount of wei invested
+        uint256 _shareAmount = msg.value.mul(totalShares).div(address(this).balance); // computes the rate of share per wei inside the pool, and multiply it by the amount of wei invested
         require(_shareAmount >= _minShare, "Not enough liquidity provided");
 
         uint256 _tokenPerShare = token.balanceOf(address(this)).div(totalShares);
-        uint _tokenAmount = _tokenPerShare.mul(_shareAmount);
+        uint256 _tokenAmount = _tokenPerShare.mul(_shareAmount);
 
         shares[msg.sender] = shares[msg.sender].add(_shareAmount);
         totalShares = totalShares.add(_shareAmount);
@@ -84,9 +84,9 @@ contract UniswitchPool {
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external {
         uint _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut);
 
-        msg.sender.transfer(_weiOut);
-
         emit TokenToEthSwitched(msg.sender, address(token), _tokenAmount, _weiOut);
+
+        msg.sender.transfer(_weiOut);
     }
 
     function tokenToTokenSwitch(uint256 _token1Amount, uint256 _minToken2Amount, address _token2Addr) external {

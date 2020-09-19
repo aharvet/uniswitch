@@ -10,12 +10,9 @@ const getPoolShares = async (addr, poolAbstract) => {
     return [userShares, totalShares];
 }
 
-const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance, fee = true) => {
-    const feeAmount = Math.floor(amountIn * 0.002);
-
+const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
     return Math.floor(
-        fee ? coinOutBalance / (coinInBalance + amountIn) * (amountIn - feeAmount) :
-            coinOutBalance / (coinInBalance + amountIn) * amountIn
+        coinOutBalance / (coinInBalance + amountIn) * amountIn
     );
 }
 
