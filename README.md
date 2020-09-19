@@ -2,7 +2,7 @@
 
 Uniswitch is an Ethereum smart contract that enables users to exchange ether and ERC20 tokens together.
 The protocol works with liquidity pools that removes the need to match a maker and a taker order.
-The fee is 0.3% of the amount sent.
+The protocol takes no fee.
 
 You can try the protocol with the ropsten testnet instance at this address : 0x2F39753079A41cAEAF29999A58d987eDc11EcB9D
 
@@ -47,7 +47,7 @@ Emits a "PoolInitialized" event.
 
 **investLiquidity(uint256 minShare) payable**
 
-Enables to deposit tokens and ether from the pool to get fees over the trades.
+Enables to deposit tokens and ether in the pool.
 "minShare" parameter represents the minimum number of share you are willing to accept for this investment.
 The amount of tokens transfered and of shares obtained are computed depenting on the amount of ether sent.
 Requires to allow the pool address to use a transferFrom transaction for the token.
@@ -55,7 +55,7 @@ Emits a "LiquidityInvested" event.
 
 **divestLiquidity(uint256 weiAmount, uint256 minToken)**
 
-Enables to withdraw tokens and ether in the pool with the fees generated.
+Enables to withdraw tokens and ether from the pool.
 "weiAmount" parameter represents the amount of wei you want to withdraw.
 "minToken" parameter represents the minimum amount of tokens you are willing to accept in return.
 Emits a "LiquidityDivested" event.
@@ -80,7 +80,6 @@ Emits a "TokenToEthSwitched" event.
 
 Enables to trade the token of the pool against a token from another pool.
 The present pool will communicated with the pool of the other token to trade ether between them.
-The fee is only paid once.
 The contracts compute the number of tokens you get depending on the ratio of ether and token available in the two pools.
 "token1Amount" parameter represents the number of tokens you want to trade.
 "minToken2Amount" parameter represents the minimum amount of tokens you are willing to accept for this trade.
