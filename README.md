@@ -4,7 +4,8 @@ Uniswitch is an Ethereum smart contract that enables users to exchange ether and
 The protocol works with liquidity pools that removes the need to match a maker and a taker order.
 The protocol takes no fee.
 
-You can try the protocol with the ropsten testnet instance at this address : 0x2F39753079A41cAEAF29999A58d987eDc11EcB9D
+You can try the protocol with the ropsten testnet instance at this address : 0x7C17822D4B806032AFA7CD9faD0Ce41cA88C14d7
+[See on Etherscan](https://ropsten.etherscan.io/address/0x7C17822D4B806032AFA7CD9faD0Ce41cA88C14d7#contracts)
 
 ## Contracts
 The protocol works with the factory pattern. Thus it is made of 2 contracts :
