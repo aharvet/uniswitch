@@ -1,9 +1,9 @@
+// SPX-License-Identifier: MIT
 pragma solidity =0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./IUniswitchFactory.sol";
-
 
 contract UniswitchPool {
     using SafeMath for uint256;
@@ -17,7 +17,13 @@ contract UniswitchPool {
     event PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount);
     event EthToTokenSwitched(address user, address token, uint256 weiIn, uint256 tokenOut);
     event TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut);
-    event TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut);
+    event TokenToTokenSwitchedPoolA(
+        address user,
+        address token1,
+        address token2,
+        uint256 tokenIn,
+        uint256 weiOut
+    );
     event TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut);
     event LiquidityInvested(address user, address token, uint256 weiAmount, uint256 tokenAmount);
     event LiquidityDivested(address user, address token, uint256 weiAmount, uint256 tokenAmount);
@@ -80,22 +86,32 @@ contract UniswitchPool {
     }
 
     function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut) external {
-        uint _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut);
+        uint256 _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut);
 
         emit TokenToEthSwitched(msg.sender, address(token), _tokenAmount, _weiOut);
 
         msg.sender.transfer(_weiOut);
     }
 
-    function tokenToTokenSwitch(uint256 _token1Amount, uint256 _minToken2Amount, address _token2Addr) external {
-        uint _weiOut = tokenInHandler(msg.sender, _token1Amount, 0);
+    function tokenToTokenSwitch(
+        uint256 _token1Amount,
+        uint256 _minToken2Amount,
+        address _token2Addr
+    ) external {
+        uint256 _weiOut = tokenInHandler(msg.sender, _token1Amount, 0);
 
         address _poolToken2Addr = factory.tokenToPool(_token2Addr);
         UniswitchPool _poolToken2 = UniswitchPool(_poolToken2Addr);
 
-        _poolToken2.tokenToTokenIn{ value: _weiOut }(msg.sender, _minToken2Amount);
+        _poolToken2.tokenToTokenIn{value: _weiOut}(msg.sender, _minToken2Amount);
 
-        emit TokenToTokenSwitchedPoolA(msg.sender, address(token), _token2Addr, _token1Amount, _weiOut);
+        emit TokenToTokenSwitchedPoolA(
+            msg.sender,
+            address(token),
+            _token2Addr,
+            _token1Amount,
+            _weiOut
+        );
     }
 
     function tokenToTokenIn(address _to, uint256 _minTokenOut) external payable {
@@ -107,7 +123,11 @@ contract UniswitchPool {
         emit TokenToTokenSwitchedPoolB(_to, address(token), msg.value, _tokenOut);
     }
 
-    function ethInHandler(address _to, uint256 _minTokenOut, bool _tokenToToken) private returns(uint256) {
+    function ethInHandler(
+        address _to,
+        uint256 _minTokenOut,
+        bool _tokenToToken
+    ) private returns (uint256) {
         uint256 _tokenBalance = token.balanceOf(address(this));
         uint256 _tokenOut = msg.value.mul(_tokenBalance).div(address(this).balance); // computes the rate of token per wei inside the pool, and multiply it by the amount of wei to switch
 
@@ -121,7 +141,11 @@ contract UniswitchPool {
         return _tokenOut;
     }
 
-    function tokenInHandler(address _to, uint256 _tokenAmount, uint256 _minWeiOut) private returns(uint256) {
+    function tokenInHandler(
+        address _to,
+        uint256 _tokenAmount,
+        uint256 _minWeiOut
+    ) private returns (uint256) {
         uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
         uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
 

@@ -1,5 +1,3 @@
-node_modules/
-build/
-depreciated/
-contracts/test/Debug.sol
-secret.json
+node_modules
+artifacts
+cache

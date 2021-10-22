@@ -8,11 +8,14 @@ You can try the protocol with the ropsten testnet instance at this address : 0x7
 [See on Etherscan](https://ropsten.etherscan.io/address/0x7C17822D4B806032AFA7CD9faD0Ce41cA88C14d7#contracts)
 
 ## Contracts
+
 The protocol works with the factory pattern. Thus it is made of 2 contracts :
-* UniswitchFactory.sol, the factory contract that creates the pools and keeps track of them
-* UniswitchPool.sol, the contract model of a pool that hosts ether and and ERC20 token
+
+- UniswitchFactory.sol, the factory contract that creates the pools and keeps track of them
+- UniswitchPool.sol, the contract model of a pool that hosts ether and and ERC20 token
 
 ## Factory interface
+
 **tokenToPool(address token) view returns(address)**
 
 Returns the pool address related to the token address in parameter.
@@ -30,6 +33,7 @@ Returns an array of every token address with a pool associated.
 Creates a new pool for the token with the address in parameter. Emits a "PoolLaunched" event.
 
 ## Pools interface
+
 **shares(address user) view returns(uint256)**
 
 Returns the number of shares a user has in the pool, each shares gives access to an amount of ether and the ERC20 token.
@@ -88,39 +92,16 @@ The contracts compute the number of tokens you get depending on the ratio of eth
 Emits a "TokenToTokenSwitchedPoolA" event from the first pool, and "TokenToTokenSwitchedPoolB" from the second pool.
 
 ## Events
-* PoolLaunched(address token, address pool)
-* PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount)
-* EthToTokenSwitched(address user, address token, uint256 weiIn, uint256 tokenOut)
-* TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut)
-* TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut)
-* TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut)
-* LiquidityInvested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
-* LiquidityDivested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
+
+- PoolLaunched(address token, address pool)
+- PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount)
+- EthToTokenSwitched(address user, address token, uint256 weiIn, uint256 tokenOut)
+- TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut)
+- TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut)
+- TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut)
+- LiquidityInvested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
+- LiquidityDivested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
 
 ## Installation
-This is a truffle environment. Use
-
-    npm i
-
-to install all the dependencies, then
-
-    truffle compile
-
-to compile the contracts.
-
-You can then go to truffle's private blockchain with
-
-    truffle develop
-
-and deploy the contract with
-
-    migrate
-
-The protocol is now available in the console with web3 or @truffle/contract library.
 
 ## Testing
-Use
-
-    truffle test
-
-to run the tests in the test folder.

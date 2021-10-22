@@ -1,7 +1,7 @@
+// SPX-License-Identifier: MIT
 pragma solidity =0.6.12;
 
 import "./UniswitchPool.sol";
-
 
 contract UniswitchFactory {
     address[] private tokens;
@@ -21,7 +21,7 @@ contract UniswitchFactory {
         emit PoolLaunched(_token, address(_newPool));
     }
 
-    function getTokens() external view returns(address[] memory) {
+    function getTokens() external view returns (address[] memory) {
         return tokens;
     }
 }
