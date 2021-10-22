@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 require('@nomiclabs/hardhat-waffle');
+require('hardhat-gas-reporter');
 
 module.exports = {
   solidity: {
@@ -13,9 +14,14 @@ module.exports = {
     },
   },
   networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_ENDPOINT,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY,
-    },
+    // ropsten: {
+    //   url: process.env.ROPSTEN_ENDPOINT,
+    //   accounts: process.env.DEPLOYER_PRIVATE_KEY,
+    // },
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS ? true : false,
+    currency: 'USD',
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
 };
