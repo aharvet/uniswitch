@@ -18,7 +18,7 @@ contract UniswitchFactory {
         tokenToPool[_token] = address(_newPool);
         poolToToken[address(_newPool)] = _token;
 
-        // emit PoolLaunched(_token, address(_newPool));
+        emit PoolLaunched(_token, address(_newPool));
     }
 
     function getTokens() external view returns (address[] memory) {
