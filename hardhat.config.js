@@ -9,7 +9,7 @@ module.exports = {
     version: '0.6.12',
     settings: {
       optimizer: {
-        enabled: false,
+        enabled: this.gasReporter.enabled || false,
         runs: 999999,
       },
     },
@@ -21,7 +21,7 @@ module.exports = {
     // },
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
+    enabled: false,
     currency: 'USD',
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
