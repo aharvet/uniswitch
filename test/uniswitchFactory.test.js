@@ -10,8 +10,6 @@ describe('UniswitchFactory', () => {
     const UniswitchFactory = await ethers.getContractFactory('UniswitchFactory');
     token = await TestToken.deploy('Test Token', 'TTK');
     factory = await UniswitchFactory.deploy();
-    await token.deployed();
-    await factory.deployed();
   });
 
   it('should launch a pool', async () => {
