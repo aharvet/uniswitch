@@ -22,10 +22,6 @@ contract('Unhappy Paths', (accounts) => {
     await token.approve(pool.address, web3.utils.toWei('1', 'ether'));
   });
 
-  it('should NOT initialize a pool with low amounts', async () => {
-    await expectRevert(pool.initializePool(1000, { value: 100 }), 'Not enough liquidity provided');
-  });
-
   it('should NOT invest liquidity if not enough share in return', async () => {
     await pool.initializePool(1000000, { value: 10000000 });
 
