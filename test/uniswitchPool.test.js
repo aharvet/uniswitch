@@ -84,7 +84,7 @@ describe('UniswitchPool', (accounts) => {
     const tokenPooled = 20000000000;
     await pool.connect(user).initializePool(tokenPooled, { value: weiPooled });
 
-    const initialUserTokenBalance = await provider.getBalance(user.address);
+    const initialUserWeiBalance = await provider.getBalance(user.address);
     const amountSwitched = 10000000;
     const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, tokenPooled, weiPooled);
 
@@ -92,11 +92,11 @@ describe('UniswitchPool', (accounts) => {
 
     const { weiBalance: finalPoolWeiBalance, tokenBalance: finalPoolTokenBalance } =
       await getBalances(pool.address, token);
-    const finalUserTokenBalance = await provider.getBalance(user.address);
+    const finalUserWeiBalance = await provider.getBalance(user.address);
 
     expect(finalPoolTokenBalance - tokenPooled).to.equal(amountSwitched);
     expect(weiPooled - finalPoolWeiBalance).to.equal(expectedWeiAmount);
-    expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(expectedWeiAmount);
+    expect(finalUserWeiBalance.sub(initialUserWeiBalance)).to.equal(expectedWeiAmount);
   });
 
   // it('should invest liquidity', async () => {

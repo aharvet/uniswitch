@@ -2,6 +2,8 @@ const {
   waffle: { provider },
 } = require('hardhat');
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 const getBalances = async (addr, tokenAbstraction) => {
   const weiBalance = await provider.getBalance(addr);
   const tokenBalance = await tokenAbstraction.balanceOf(addr);
@@ -30,6 +32,7 @@ const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
 // };
 
 module.exports = {
+  ZERO_ADDRESS,
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,

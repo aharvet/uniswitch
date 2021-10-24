@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ZERO_ADDRESS } = require('./constants');
+const { ZERO_ADDRESS } = require('./utils');
 
 describe('UniswitchFactory', () => {
   let token;
