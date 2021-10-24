@@ -3,6 +3,7 @@ require('dotenv').config();
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
 require('@nomiclabs/hardhat-etherscan');
+require('hardhat-tracer');
 
 // Macros
 const showGasReporter = false;
@@ -17,7 +18,11 @@ const params = {
       },
     },
   },
-  networks: {},
+  networks: {
+    hardhat: {
+      initialBaseFeePerGas: 0,
+    },
+  },
   gasReporter: {
     enabled: showGasReporter,
     currency: 'USD',

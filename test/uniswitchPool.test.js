@@ -1,9 +1,13 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const {
+  ethers,
+  waffle: { provider },
+} = require('hardhat');
 
 const { getBalances, getPoolShares, computeSwitchOutAmount, computeShareFlow } = require('./utils');
 
 describe('UniswitchPool', (accounts) => {
+  const oneMillionString = ethers.utils.parseUnits('1', 18);
   let token;
   let factory;
   let pool;
@@ -11,8 +15,6 @@ describe('UniswitchPool', (accounts) => {
   let user;
 
   beforeEach(async () => {
-    const oneMillionString = ethers.utils.parseUnits('1', 18);
-
     [owner, user] = await ethers.getSigners();
 
     const TestToken = await ethers.getContractFactory('TestToken');
@@ -28,6 +30,11 @@ describe('UniswitchPool', (accounts) => {
 
     await token.mint(user.address, oneMillionString);
     await token.connect(user).approve(poolAddress, oneMillionString);
+
+    hre.tracer.nameTags[owner.address] = 'OWNER';
+    hre.tracer.nameTags[user.address] = 'USER';
+    hre.tracer.nameTags[factory.address] = 'FACTORY';
+    hre.tracer.nameTags[pool.address] = 'POOL';
   });
 
   it('should initialize pool', async () => {
@@ -44,108 +51,53 @@ describe('UniswitchPool', (accounts) => {
     expect(totalShares).to.equal(1000);
   });
 
-  // it('should NOT initialize a pool with low amounts', async () => {
-  //   await expectRevert(pool.initializePool(1000, { value: 100 }), 'Not enough liquidity provided');
-  // });
+  it('should NOT initialize a pool with low amounts', async () => {
+    await expect(pool.initializePool(1000, { value: 100 })).to.revertedWith(
+      'Not enough liquidity provided',
+    );
+  });
 
-  // it('should switch eth to token', async () => {
-  //   const [initialPoolWeiBalance, initialPoolTokenBalance] = await getBalances(pool.address, token);
-  //   const initialUserTokenBalance = await token.balanceOf(accounts[0]);
+  it('should switch eth to token', async () => {
+    const weiPooled = 10000000000;
+    const tokenPooled = 20000000000;
+    await pool.connect(user).initializePool(tokenPooled, { value: weiPooled });
 
-  //   const amountSwitched = 10000;
-  //   const expectedTokenAmount = computeSwitchOutAmount(
-  //     amountSwitched,
-  //     parseInt(initialPoolWeiBalance),
-  //     initialPoolTokenBalance,
-  //   );
+    const initialUserTokenBalance = await token.balanceOf(user.address);
 
-  //   await pool.ethToTokenSwitch(0, { value: amountSwitched });
+    const amountSwitched = 100000000;
+    const expectedTokenAmount = computeSwitchOutAmount(amountSwitched, weiPooled, tokenPooled);
 
-  //   const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
-  //   const finalUserTokenBalance = await token.balanceOf(accounts[0]);
+    const tx = await pool.connect(user).ethToTokenSwitch(0, { value: amountSwitched });
+    await tx.wait();
 
-  //   assert.equal(
-  //     finalPoolWeiBalance - initialPoolWeiBalance,
-  //     amountSwitched,
-  //     'Wrong pool wei final amount',
-  //   );
-  //   assert.equal(
-  //     finalPoolTokenBalance - initialPoolTokenBalance,
-  //     -expectedTokenAmount,
-  //     'Wrong pool token final amount',
-  //   );
-  //   assert.equal(
-  //     finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(),
-  //     expectedTokenAmount,
-  //     'Wrong user token final amount',
-  //   );
-  // });
+    const { weiBalance: finalPoolWeiBalance, tokenBalance: finalPoolTokenBalance } =
+      await getBalances(pool.address, token);
+    const finalUserTokenBalance = await token.balanceOf(user.address);
 
-  // it('should switch eth to token a second time', async () => {
-  //   const [initialPoolWeiBalance, initialPoolTokenBalance] = await getBalances(pool.address, token);
-  //   const initialUserTokenBalance = await token.balanceOf(accounts[0]);
+    expect(finalPoolWeiBalance - weiPooled).to.equal(amountSwitched);
+    expect(tokenPooled - finalPoolTokenBalance).to.equal(expectedTokenAmount);
+    expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(expectedTokenAmount);
+  });
 
-  //   const amountSwitched = 10000;
-  //   const expectedTokenAmount = computeSwitchOutAmount(
-  //     amountSwitched,
-  //     parseInt(initialPoolWeiBalance),
-  //     initialPoolTokenBalance,
-  //   );
+  it('should switch token to eth', async () => {
+    const weiPooled = 10000000000;
+    const tokenPooled = 20000000000;
+    await pool.connect(user).initializePool(tokenPooled, { value: weiPooled });
 
-  //   await pool.ethToTokenSwitch(0, { value: amountSwitched });
+    const initialUserTokenBalance = await provider.getBalance(user.address);
+    const amountSwitched = 10000000;
+    const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, tokenPooled, weiPooled);
 
-  //   const [finalPoolWeiBalance, finalPoolTokenBalance] = await getBalances(pool.address, token);
-  //   const finalUserTokenBalance = await token.balanceOf(accounts[0]);
+    await pool.connect(user).tokenToEthSwitch(amountSwitched, 0, { gasPrice: 0 });
 
-  //   assert.equal(
-  //     finalPoolWeiBalance - initialPoolWeiBalance,
-  //     amountSwitched,
-  //     'Wrong pool wei final amount',
-  //   );
-  //   assert.equal(
-  //     finalPoolTokenBalance - initialPoolTokenBalance,
-  //     -expectedTokenAmount,
-  //     'Wrong pool token final amount',
-  //   );
-  //   assert.equal(
-  //     finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(),
-  //     expectedTokenAmount,
-  //     'Wrong user token final amount',
-  //   );
-  // });
+    const { weiBalance: finalPoolWeiBalance, tokenBalance: finalPoolTokenBalance } =
+      await getBalances(pool.address, token);
+    const finalUserTokenBalance = await provider.getBalance(user.address);
 
-  // it('should switch token to eth', async () => {
-  //   const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
-  //   const initialUserTokenBalance = await token.balanceOf(accounts[0]);
-
-  //   const amountSwitched = 10000;
-  //   const expectedWeiAmount = computeSwitchOutAmount(
-  //     amountSwitched,
-  //     initialTokenBalance.toNumber(),
-  //     initialWeiBalance,
-  //   );
-
-  //   await pool.tokenToEthSwitch(10000, 0);
-
-  //   const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
-  //   const finalUserTokenBalance = await token.balanceOf(accounts[0]);
-
-  //   assert.equal(
-  //     finalTokenBalance - initialTokenBalance,
-  //     amountSwitched,
-  //     'Wrong pool token final amount',
-  //   );
-  //   assert.equal(
-  //     finalWeiBalance - initialWeiBalance,
-  //     -expectedWeiAmount,
-  //     'Wrong pool wei final amount',
-  //   );
-  //   assert.equal(
-  //     finalUserTokenBalance.sub(initialUserTokenBalance).toNumber(),
-  //     -amountSwitched,
-  //     'Wrong user token final amount',
-  //   );
-  // });
+    expect(finalPoolTokenBalance - tokenPooled).to.equal(amountSwitched);
+    expect(weiPooled - finalPoolWeiBalance).to.equal(expectedWeiAmount);
+    expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(expectedWeiAmount);
+  });
 
   // it('should invest liquidity', async () => {
   //   const weiInvested = 10000;

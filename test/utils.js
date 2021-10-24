@@ -14,9 +14,9 @@ const getPoolShares = async (addr, poolAbstraction) => {
   return { userShares, totalShares };
 };
 
-// const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
-//   return Math.floor((coinOutBalance / (coinInBalance + amountIn)) * amountIn);
-// };
+const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
+  return Math.floor((coinOutBalance / (coinInBalance + amountIn)) * amountIn);
+};
 
 // const computeShareFlow = (weiFlow, initialWeiBalance, initialTokenBalance, initialTotalShares) => {
 //   const expectedShareAmount = Math.floor((weiFlow * initialTotalShares) / initialWeiBalance);
@@ -32,7 +32,7 @@ const getPoolShares = async (addr, poolAbstraction) => {
 module.exports = {
   getBalances,
   getPoolShares,
-  //   computeSwitchOutAmount,
+  computeSwitchOutAmount,
   //   computeShareFlow,
   //   getTokensBalances,
 };

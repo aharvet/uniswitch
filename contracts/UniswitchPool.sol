@@ -129,7 +129,8 @@ contract UniswitchPool {
         bool _tokenToToken
     ) private returns (uint256) {
         uint256 _tokenBalance = token.balanceOf(address(this));
-        uint256 _tokenOut = msg.value.mul(_tokenBalance).div(address(this).balance); // computes the rate of token per wei inside the pool, and multiply it by the amount of wei to switch
+        // computes the rate of token per wei inside the pool, and multiply it by the amount of wei to switch
+        uint256 _tokenOut = msg.value.mul(_tokenBalance).div(address(this).balance);
 
         require(
             _tokenOut >= _minTokenOut,
@@ -147,7 +148,8 @@ contract UniswitchPool {
         uint256 _minWeiOut
     ) private returns (uint256) {
         uint256 _tokenBalance = token.balanceOf(address(this)).add(_tokenAmount);
-        uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(_tokenBalance); // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
+        // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
+        uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(_tokenBalance);
 
         require(_weiOut >= _minWeiOut, "Not enough token provided");
         token.transferFrom(_to, address(this), _tokenAmount);
