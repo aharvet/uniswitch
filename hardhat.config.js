@@ -4,9 +4,10 @@ require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
 require('@nomiclabs/hardhat-etherscan');
 require('hardhat-tracer');
+require('solidity-coverage');
 
 // Macros
-const showGasReporter = false;
+const showGasReporter = true;
 
 const params = {
   solidity: {

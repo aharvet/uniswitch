@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.6.12;
+
+pragma solidity 0.6.12;
 
 import "./UniswitchPool.sol";
 
 contract UniswitchFactory {
-    address[] private tokens;
     mapping(address => address) public tokenToPool;
     mapping(address => address) public poolToToken;
 
     event PoolLaunched(address token, address pool);
 
-    function launchPool(address _token) external {
-        require(_token != address(0), "Zero address provided");
+    function launchPool(address token) external {
+        require(token != address(0), "UniswitchFactory: Zero address provided");
+        require(
+            tokenToPool[token] == address(0),
+            "UniswitchFactory: pool already created for token"
+        );
 
-        UniswitchPool _newPool = new UniswitchPool(_token);
-        tokens.push(_token);
-        tokenToPool[_token] = address(_newPool);
-        poolToToken[address(_newPool)] = _token;
+        address newPool = address(new UniswitchPool(token));
+        tokenToPool[token] = newPool;
+        poolToToken[newPool] = token;
 
-        emit PoolLaunched(_token, address(_newPool));
-    }
-
-    function getTokens() external view returns (address[] memory) {
-        return tokens;
+        emit PoolLaunched(token, newPool);
     }
 }
