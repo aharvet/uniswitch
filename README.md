@@ -44,26 +44,26 @@ Returns the total number of shares in circulation.
 
 **initializePool(uint256 tokenAmount) payable**
 
-Initialize a pool with ether and tokens. Initialization is required to start using the pool.
+Initialize a pool with ether and tokens. Initialization is required to start using the pool and any time there is not liquidity left.
 "tokenAmount" parameter represents the amount of token sent.
 Requires to send at least 100000 units of wei and of the token and to allow the pool address to use a transferFrom transaction for the token.
 The user gets 1000 shares in the pool for initializing it.
 Emits a "PoolInitialized" event.
 
-**investLiquidity(uint256 minShare) payable**
+**provideLiquidity(uint256 minShare) payable**
 
 Enables to deposit tokens and ether in the pool.
 "minShare" parameter represents the minimum number of share you are willing to accept for this investment.
 The amount of tokens transfered and of shares obtained are computed depenting on the amount of ether sent.
 Requires to allow the pool address to use a transferFrom transaction for the token.
-Emits a "LiquidityInvested" event.
+Emits a "LiquidityProvided" event.
 
-**divestLiquidity(uint256 weiAmount, uint256 minToken)**
+**withdrawLiquidity(uint256 weiAmount, uint256 minToken)**
 
 Enables to withdraw tokens and ether from the pool.
 "weiAmount" parameter represents the amount of wei you want to withdraw.
 "minToken" parameter represents the minimum amount of tokens you are willing to accept in return.
-Emits a "LiquidityDivested" event.
+Emits a "LiquidityWithdrew" event.
 
 **ethToTokenSwitch(uint256 minTokenOut) payable**
 
@@ -99,8 +99,8 @@ Emits a "TokenToTokenSwitchedPoolA" event from the first pool, and "TokenToToken
 - TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut)
 - TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut)
 - TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut)
-- LiquidityInvested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
-- LiquidityDivested(address user, address token, uint256 weiAmount, uint256 tokenAmount)
+- LiquidityProvided(address user, uint256 sharesCreated, uint256 weiAmount, uint256 tokenAmount)
+- LiquidityWithdrew(address user, address token, uint256 weiAmount, uint256 tokenAmount)
 
 ## Installation
 

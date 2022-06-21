@@ -2,15 +2,15 @@ const {
   waffle: { provider },
 } = require('hardhat');
 
-const getBalances = async (addr, tokenAbstraction) => {
+const getBalances = async (addr, getTokenBalance) => {
   const weiBalance = await provider.getBalance(addr);
-  const tokenBalance = await tokenAbstraction.balanceOf(addr);
+  const tokenBalance = await getTokenBalance(addr);
   return { weiBalance, tokenBalance };
 };
 
-const getPoolShares = async (addr, poolAbstraction) => {
-  const userShares = await poolAbstraction.shares(addr);
-  const totalShares = await poolAbstraction.totalShares();
+const getPoolShares = async (addr, pool) => {
+  const userShares = await pool.shares(addr);
+  const totalShares = await pool.totalShares();
   return { userShares, totalShares };
 };
 
@@ -18,12 +18,34 @@ const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
   return Math.floor((coinOutBalance / (coinInBalance + amountIn)) * amountIn);
 };
 
-// const computeShareFlow = (weiFlow, initialWeiBalance, initialTokenBalance, initialTotalShares) => {
-//   const expectedShareAmount = Math.floor((weiFlow * initialTotalShares) / initialWeiBalance);
-//   const expectedTokenAmount =
-//     Math.floor(initialTokenBalance / initialTotalShares) * expectedShareAmount;
-//   return [expectedShareAmount, expectedTokenAmount];
-// };
+const computeShareReceived = (
+  weiProvided,
+  initialWeiBalance,
+  initialTokenBalance,
+  initialTotalShares,
+) => {
+  const expectedShareAmount = weiProvided
+    .mul(initialTotalShares)
+    .div(initialWeiBalance);
+
+  const expectedTokenAmount = expectedShareAmount
+    .mul(initialTokenBalance)
+    .div(initialTotalShares);
+  return { expectedShareAmount, expectedTokenAmount };
+};
+
+// Initialization is done by default account
+const initPoolAndReturnSharesData = async (
+  account,
+  pool,
+  tokenAmount,
+  weiAmount,
+) => {
+  await pool.initializePool(tokenAmount, {
+    value: weiAmount,
+  });
+  return await getPoolShares(account.address, pool);
+};
 
 // const getTokensBalances = async (addr, tokensAbstract) => {
 //   return Promise.all(tokensAbstract.map((tokenAbstract) => tokenAbstract.balanceOf(addr)));
@@ -33,6 +55,7 @@ module.exports = {
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,
-  //   computeShareFlow,
+  computeShareReceived,
+  initPoolAndReturnSharesData,
   //   getTokensBalances,
 };

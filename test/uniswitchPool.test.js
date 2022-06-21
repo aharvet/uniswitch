@@ -8,7 +8,8 @@ const {
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,
-  computeShareFlow,
+  computeShareReceived,
+  initPoolAndReturnSharesData,
 } = require('./utils');
 
 describe('UniswitchPool', (accounts) => {
@@ -34,7 +35,9 @@ describe('UniswitchPool', (accounts) => {
     const poolAddress = events[0].args.pool;
     pool = UniswitchPool.attach(poolAddress);
 
+    await token.mint(owner.address, oneWith18Decimals);
     await token.mint(user.address, oneWith18Decimals);
+    await token.approve(poolAddress, oneWith18Decimals);
     await token.connect(user).approve(poolAddress, oneWith18Decimals);
 
     hre.tracer.nameTags[owner.address] = 'OWNER';
@@ -54,7 +57,7 @@ describe('UniswitchPool', (accounts) => {
 
       const { weiBalance, tokenBalance } = await getBalances(
         pool.address,
-        token,
+        token.balanceOf,
       );
       const { userShares, totalShares } = await getPoolShares(
         user.address,
@@ -71,7 +74,6 @@ describe('UniswitchPool', (accounts) => {
       const tx = await pool
         .connect(user)
         .initializePool(tokenPooled, { value: weiPooled });
-      const { events } = await tx.wait();
 
       await expect(tx)
         .to.emit(pool, 'PoolInitialized')
@@ -97,8 +99,137 @@ describe('UniswitchPool', (accounts) => {
 
       await expect(
         pool.connect(user).initializePool(tokenPooled, { value: weiPooled }),
-      ).to.be.revertedWith('UniswitchPool: already initialized');
+      ).to.be.revertedWith('UniswitchPool: pool already has liquidity');
     });
+  });
+
+  describe('provideLiquidity', () => {
+    const weiProvided = BigNumber.from(10000);
+    const weiDepositForInit = BigNumber.from(2000000);
+    const tokenDepositForInit = BigNumber.from(1000000);
+
+    it('should provide liquidity', async () => {
+      const { userShares: initialUserShares, totalShares: initialTotalShares } =
+        await initPoolAndReturnSharesData(
+          user,
+          pool,
+          tokenDepositForInit,
+          weiDepositForInit,
+        );
+
+      const { expectedShareAmount, expectedTokenAmount } = computeShareReceived(
+        weiProvided,
+        weiDepositForInit,
+        tokenDepositForInit,
+        initialTotalShares,
+      );
+
+      await pool.connect(user).provideLiquidity(0, { value: weiProvided });
+
+      const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
+        await getBalances(pool.address, token.balanceOf);
+      const { userShares: finalUserShares, totalShares: finalTotalShares } =
+        await getPoolShares(user.address, pool);
+
+      expect(finalWeiBalance.sub(weiDepositForInit)).equal(weiProvided);
+      expect(finalTokenBalance.sub(tokenDepositForInit)).equal(
+        expectedTokenAmount,
+      );
+      expect(finalUserShares.sub(initialUserShares)).equal(expectedShareAmount);
+      expect(finalTotalShares.sub(initialTotalShares)).equal(
+        expectedShareAmount,
+      );
+    });
+
+    it('should emit LiquidityProvided event', async () => {
+      const { totalShares } = await initPoolAndReturnSharesData(
+        user,
+        pool,
+        tokenDepositForInit,
+        weiDepositForInit,
+      );
+
+      const { expectedShareAmount, expectedTokenAmount } = computeShareReceived(
+        weiProvided,
+        weiDepositForInit,
+        tokenDepositForInit,
+        totalShares,
+      );
+
+      const tx = await pool
+        .connect(user)
+        .provideLiquidity(0, { value: weiProvided });
+
+      await expect(tx)
+        .to.emit(pool, 'LiquidityProvided')
+        .withArgs(
+          user.address,
+          expectedShareAmount,
+          weiProvided,
+          expectedTokenAmount,
+        );
+    });
+
+    it('should not provide liquidity if pool not initialized', async () => {
+      await expect(
+        pool.connect(user).provideLiquidity(0, { value: weiProvided }),
+      ).to.be.revertedWith('UniswitchPool: pool not initialized');
+    });
+
+    it('should not provide liquidity if not enough share received', async () => {
+      const { totalShares } = await initPoolAndReturnSharesData(
+        user,
+        pool,
+        tokenDepositForInit,
+        weiDepositForInit,
+      );
+
+      const { expectedShareAmount } = computeShareReceived(
+        weiProvided,
+        weiDepositForInit,
+        tokenDepositForInit,
+        totalShares,
+      );
+
+      await expect(
+        pool
+          .connect(user)
+          .provideLiquidity(expectedShareAmount.add(1), { value: weiProvided }),
+      ).to.be.revertedWith('UniswitchPool: Not enough share received');
+    });
+  });
+
+  describe('withdrawLiquidity', () => {
+    // it('should divest liquidity', async () => {
+    //   const weiDivested = 8000;
+    //   const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
+    //   const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
+    //   const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(
+    //     weiDivested,
+    //     initialWeiBalance,
+    //     initialTokenBalance,
+    //     initialTotalShares,
+    //   );
+    //   await pool.divestLiquidity(weiDivested, 0);
+    //   const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
+    //   const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
+    //   assert.equal(initialWeiBalance - finalWeiBalance, weiDivested, 'Wrong pool wei final amount');
+    //   assert.equal(
+    //     initialTokenBalance - finalTokenBalance,
+    //     expectedTokenAmount,
+    //     'Wrong pool token final amount',
+    //   );
+    //   assert.equal(
+    //     initialUserShares - finalUserShares,
+    //     expectedShareAmount,
+    //     'Wrong user share final amount',
+    //   );
+    //   assert.equal(
+    //     initialTotalShares - finalTotalShares,
+    //     expectedShareAmount,
+    //     'Wrong total share final amount',
+    //   );
+    // });
   });
 
   // it('should switch eth to token', async () => {
@@ -141,77 +272,5 @@ describe('UniswitchPool', (accounts) => {
   //   expect(finalPoolTokenBalance - tokenPooled).to.equal(amountSwitched);
   //   expect(weiPooled - finalPoolWeiBalance).to.equal(expectedWeiAmount);
   //   expect(finalUserWeiBalance.sub(initialUserWeiBalance)).to.equal(expectedWeiAmount);
-  // });
-
-  // it('should invest liquidity', async () => {
-  //   const weiInvested = 10000;
-
-  //   const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
-  //   const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
-
-  //   const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(
-  //     weiInvested,
-  //     initialWeiBalance,
-  //     initialTokenBalance,
-  //     initialTotalShares,
-  //   );
-
-  //   await pool.investLiquidity(0, { value: weiInvested });
-
-  //   const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
-  //   const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
-
-  //   assert.equal(finalWeiBalance - initialWeiBalance, weiInvested, 'Wrong pool wei final amount');
-  //   assert.equal(
-  //     finalTokenBalance - initialTokenBalance,
-  //     expectedTokenAmount,
-  //     'Wrong pool token final amount',
-  //   );
-  //   assert.equal(
-  //     finalUserShares - initialUserShares,
-  //     expectedShareAmount,
-  //     'Wrong user share final amount',
-  //   );
-  //   assert.equal(
-  //     finalTotalShares - initialTotalShares,
-  //     expectedShareAmount,
-  //     'Wrong total share final amount',
-  //   );
-  // });
-
-  // it('should divest liquidity', async () => {
-  //   const weiDivested = 8000;
-
-  //   const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
-  //   const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
-
-  //   const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(
-  //     weiDivested,
-  //     initialWeiBalance,
-  //     initialTokenBalance,
-  //     initialTotalShares,
-  //   );
-
-  //   await pool.divestLiquidity(weiDivested, 0);
-
-  //   const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
-  //   const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
-
-  //   assert.equal(initialWeiBalance - finalWeiBalance, weiDivested, 'Wrong pool wei final amount');
-  //   assert.equal(
-  //     initialTokenBalance - finalTokenBalance,
-  //     expectedTokenAmount,
-  //     'Wrong pool token final amount',
-  //   );
-  //   assert.equal(
-  //     initialUserShares - finalUserShares,
-  //     expectedShareAmount,
-  //     'Wrong user share final amount',
-  //   );
-  //   assert.equal(
-  //     initialTotalShares - finalTotalShares,
-  //     expectedShareAmount,
-  //     'Wrong total share final amount',
-  //   );
   // });
 });

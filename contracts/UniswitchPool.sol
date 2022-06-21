@@ -6,18 +6,30 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./IUniswitchFactory.sol";
 
+import "hardhat/console.sol";
+
 contract UniswitchPool {
     using SafeMath for uint256;
 
     IUniswitchFactory public immutable factory;
     IERC20 public immutable token;
 
-    bool initialized;
-
     mapping(address => uint256) public shares;
     uint256 public totalShares = 0;
 
     event PoolInitialized(address pool, uint256 weiAmount, uint256 tokenAmount);
+    event LiquidityProvided(
+        address user,
+        uint256 sharesCreated,
+        uint256 weiAmount,
+        uint256 tokenAmount
+    );
+    event LiquidityWithdrew(
+        address user,
+        address token,
+        uint256 weiAmount,
+        uint256 tokenAmount
+    );
     event EthToTokenSwitched(
         address user,
         address token,
@@ -43,18 +55,6 @@ contract UniswitchPool {
         uint256 weiIn,
         uint256 tokenOut
     );
-    event LiquidityInvested(
-        address user,
-        address token,
-        uint256 weiAmount,
-        uint256 tokenAmount
-    );
-    event LiquidityDivested(
-        address user,
-        address token,
-        uint256 weiAmount,
-        uint256 tokenAmount
-    );
 
     constructor(address _tokenAddr) public {
         require(
@@ -66,63 +66,78 @@ contract UniswitchPool {
         token = IERC20(_tokenAddr);
     }
 
-    function initializePool(uint256 _tokenAmount) external payable {
-        require(!initialized, "UniswitchPool: already initialized");
+    /// @notice Has to be called anytime the pool has no liquidity.
+    /// That means it can be called multiple times in the pool lifetime.
+    function initializePool(uint256 tokenAmount) external payable {
+        // If no shares in circulation, the pool has no liquidity
+        require(totalShares == 0, "UniswitchPool: pool already has liquidity");
         require(
-            msg.value >= 100000 && _tokenAmount >= 100000,
+            msg.value >= 100000 && tokenAmount >= 100000,
             "UniswitchPool: Not enough liquidity provided"
         );
 
-        initialized = true;
         shares[msg.sender] = 1000;
         totalShares = 1000;
 
-        emit PoolInitialized(address(this), msg.value, _tokenAmount);
+        emit PoolInitialized(address(this), msg.value, tokenAmount);
 
-        token.transferFrom(msg.sender, address(this), _tokenAmount);
+        token.transferFrom(msg.sender, address(this), tokenAmount);
     }
 
-    function investLiquidity(uint256 _minShare) external payable {
-        uint256 tokenBalance = token.balanceOf(address(this));
-        require(address(this).balance > 0 && tokenBalance > 0);
+    function provideLiquidity(uint256 minShares) external payable {
+        uint256 _totalShares = totalShares;
+        // If no shares in circulation, the pool has no liquidity
+        require(_totalShares != 0, "UniswitchPool: pool not initialized");
 
-        uint256 _shareAmount = msg.value.mul(totalShares).div(
-            address(this).balance
-        ); // computes the rate of share per wei inside the pool, and multiply it by the amount of wei invested
-        require(_shareAmount >= _minShare, "Not enough liquidity provided");
-
-        uint256 _tokenPerShare = token.balanceOf(address(this)).div(
-            totalShares
+        // Computes the rate of shares per wei inside the pool, and multiply it
+        // by the amount of wei invested
+        uint256 sharesAmount = msg.value.mul(_totalShares).div(
+            // Wei sent by user is already added to contract balance
+            address(this).balance.sub(msg.value)
         );
-        uint256 _tokenAmount = _tokenPerShare.mul(_shareAmount);
+        require(
+            sharesAmount >= minShares,
+            "UniswitchPool: Not enough share received"
+        );
 
-        shares[msg.sender] = shares[msg.sender].add(_shareAmount);
-        totalShares = totalShares.add(_shareAmount);
+        // Computes the rate of token inside the pool per shares, and multiply it
+        // by the amount of shares the user will receive
+        uint256 tokenAmount = sharesAmount
+            .mul(token.balanceOf(address(this)))
+            .div(_totalShares);
 
-        emit LiquidityInvested(
+        // Will never overflow because the number of shares in existence will always
+        // be substencially lower that funds pooled
+        shares[msg.sender] += sharesAmount;
+        totalShares += sharesAmount;
+
+        emit LiquidityProvided(
             msg.sender,
-            address(token),
+            sharesAmount,
             msg.value,
-            _tokenAmount
+            tokenAmount
         );
 
-        token.transferFrom(msg.sender, address(this), _tokenAmount);
+        token.transferFrom(msg.sender, address(this), tokenAmount);
     }
 
-    function divestLiquidity(uint256 _weiAmount, uint256 _minToken) external {
+    function withdrawLiquidity(uint256 _weiAmount, uint256 _minToken) external {
+        // computes the rate of share per wei inside the pool, and multiply it by the amount
+        // of wei divested
         uint256 _withdrewShareAmount = _weiAmount.mul(totalShares).div(
             address(this).balance
-        ); // computes the rate of share per wei inside the pool, and multiply it by the amount of wei divested
+        );
         uint256 _tokenPerShare = token.balanceOf(address(this)).div(
             totalShares
         );
         uint256 _tokenOut = _withdrewShareAmount.mul(_tokenPerShare);
         require(_tokenOut >= _minToken, "Not enough token in return");
 
+        // Will never underflow because the number of share burnt is proportionnaly to liquidity withdrew
         shares[msg.sender] = shares[msg.sender].sub(_withdrewShareAmount);
         totalShares = totalShares.sub(_withdrewShareAmount);
 
-        emit LiquidityDivested(
+        emit LiquidityWithdrew(
             msg.sender,
             address(token),
             _weiAmount,
