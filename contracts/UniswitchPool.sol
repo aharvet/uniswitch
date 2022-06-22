@@ -26,7 +26,7 @@ contract UniswitchPool {
     );
     event LiquidityWithdrew(
         address user,
-        address token,
+        uint256 sharesBurnt,
         uint256 weiAmount,
         uint256 tokenAmount
     );
@@ -70,14 +70,14 @@ contract UniswitchPool {
     /// That means it can be called multiple times in the pool lifetime.
     function initializePool(uint256 tokenAmount) external payable {
         // If no shares in circulation, the pool has no liquidity
-        require(totalShares == 0, "UniswitchPool: pool already has liquidity");
+        require(totalShares == 0, "UniswitchPool: Pool already has liquidity");
         require(
             msg.value >= 100000 && tokenAmount >= 100000,
             "UniswitchPool: Not enough liquidity provided"
         );
 
-        shares[msg.sender] = 1000;
-        totalShares = 1000;
+        shares[msg.sender] = 100000000;
+        totalShares = 100000000;
 
         emit PoolInitialized(address(this), msg.value, tokenAmount);
 
@@ -87,7 +87,7 @@ contract UniswitchPool {
     function provideLiquidity(uint256 minShares) external payable {
         uint256 _totalShares = totalShares;
         // If no shares in circulation, the pool has no liquidity
-        require(_totalShares != 0, "UniswitchPool: pool not initialized");
+        require(_totalShares != 0, "UniswitchPool: Pool not initialized");
 
         // Computes the rate of shares per wei inside the pool, and multiply it
         // by the amount of wei invested
@@ -121,31 +121,34 @@ contract UniswitchPool {
         token.transferFrom(msg.sender, address(this), tokenAmount);
     }
 
-    function withdrawLiquidity(uint256 _weiAmount, uint256 _minToken) external {
-        // computes the rate of share per wei inside the pool, and multiply it by the amount
-        // of wei divested
-        uint256 _withdrewShareAmount = _weiAmount.mul(totalShares).div(
+    function withdrawLiquidity(uint256 weiAmount, uint256 minToken) external {
+        // Computes the rate of shares per wei inside the pool, and multiply it by the amount
+        // of wei withdrew to get the corresponding shares amount
+        uint256 sharesAmount = weiAmount.mul(totalShares).div(
             address(this).balance
         );
-        uint256 _tokenPerShare = token.balanceOf(address(this)).div(
+        // Computes the number of token per share and multiplies it by the number of shares to burn
+        uint256 tokenOut = sharesAmount.mul(token.balanceOf(address(this))).div(
             totalShares
         );
-        uint256 _tokenOut = _withdrewShareAmount.mul(_tokenPerShare);
-        require(_tokenOut >= _minToken, "Not enough token in return");
-
-        // Will never underflow because the number of share burnt is proportionnaly to liquidity withdrew
-        shares[msg.sender] = shares[msg.sender].sub(_withdrewShareAmount);
-        totalShares = totalShares.sub(_withdrewShareAmount);
-
-        emit LiquidityWithdrew(
-            msg.sender,
-            address(token),
-            _weiAmount,
-            _tokenOut
+        require(
+            tokenOut >= minToken,
+            "UniswitchPool: Not enough token in return"
         );
 
-        token.transfer(msg.sender, _tokenOut);
-        msg.sender.transfer(_weiAmount);
+        // Will revert if user tries to withdraw more than authorized
+        shares[msg.sender] = shares[msg.sender].sub(
+            sharesAmount,
+            "UniswitchPool: Not enough shares in the pool"
+        );
+        // Will never underflow because the number of shares burnt is proportionnaly to liquidity withdrew
+        totalShares -= sharesAmount;
+
+        emit LiquidityWithdrew(msg.sender, sharesAmount, weiAmount, tokenOut);
+
+        // Will revert if not enough wei or tokens in the pool
+        token.transfer(msg.sender, tokenOut);
+        msg.sender.transfer(weiAmount);
     }
 
     function ethToTokenSwitch(uint256 _minTokenOut) external payable {

@@ -100,7 +100,7 @@ Emits a "TokenToTokenSwitchedPoolA" event from the first pool, and "TokenToToken
 - TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut)
 - TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut)
 - LiquidityProvided(address user, uint256 sharesCreated, uint256 weiAmount, uint256 tokenAmount)
-- LiquidityWithdrew(address user, address token, uint256 weiAmount, uint256 tokenAmount)
+- LiquidityWithdrew(address user, uint256 sharesBurnt, uint256 weiAmount, uint256 tokenAmount)
 
 ## Installation
 

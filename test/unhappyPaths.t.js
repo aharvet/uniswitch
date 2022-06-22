@@ -22,19 +22,6 @@ contract('Unhappy Paths', (accounts) => {
     await token.approve(pool.address, web3.utils.toWei('1', 'ether'));
   });
 
-  it('should NOT invest liquidity if not enough share in return', async () => {
-    await pool.initializePool(1000000, { value: 10000000 });
-
-    await expectRevert(
-      pool.investLiquidity(10000000, { value: 100 }),
-      'Not enough liquidity provided',
-    );
-  });
-
-  it('should NOT divest liquidity if not enough token in return', async () => {
-    await expectRevert(pool.divestLiquidity(100, 100000000), 'Not enough token in return');
-  });
-
   it('should NOT swith token with tokenToTokenIn function', async () => {
     await expectRevert(
       pool.tokenToTokenIn(accounts[0], 0, { value: 100000 }),
@@ -43,11 +30,17 @@ contract('Unhappy Paths', (accounts) => {
   });
 
   it('should NOT switch eth to token if not enough token in return', async () => {
-    await expectRevert(pool.ethToTokenSwitch(100000000, { value: 100 }), 'Not enough wei provided');
+    await expectRevert(
+      pool.ethToTokenSwitch(100000000, { value: 100 }),
+      'Not enough wei provided',
+    );
   });
 
   it('should NOT switch token to eth if not enough wei in return', async () => {
-    await expectRevert(pool.tokenToEthSwitch(100, 100000000), 'Not enough token provided');
+    await expectRevert(
+      pool.tokenToEthSwitch(100, 100000000),
+      'Not enough token provided',
+    );
   });
 
   it('should NOT switch token to token if not enough token in return', async () => {

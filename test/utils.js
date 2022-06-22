@@ -18,7 +18,7 @@ const computeSwitchOutAmount = (amountIn, coinInBalance, coinOutBalance) => {
   return Math.floor((coinOutBalance / (coinInBalance + amountIn)) * amountIn);
 };
 
-const computeShareReceived = (
+const computeSharesAmount = (
   weiProvided,
   initialWeiBalance,
   initialTokenBalance,
@@ -55,7 +55,7 @@ module.exports = {
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,
-  computeShareReceived,
+  computeSharesAmount,
   initPoolAndReturnSharesData,
   //   getTokensBalances,
 };

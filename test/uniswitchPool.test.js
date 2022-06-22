@@ -8,7 +8,7 @@ const {
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,
-  computeShareReceived,
+  computeSharesAmount,
   initPoolAndReturnSharesData,
 } = require('./utils');
 
@@ -66,8 +66,8 @@ describe('UniswitchPool', (accounts) => {
 
       expect(weiBalance).to.equal(weiPooled);
       expect(tokenBalance).to.equal(tokenPooled);
-      expect(userShares).to.equal(1000);
-      expect(totalShares).to.equal(1000);
+      expect(userShares).to.equal(100000000);
+      expect(totalShares).to.equal(100000000);
     });
 
     it('should emit PoolInitialized event', async () => {
@@ -99,7 +99,7 @@ describe('UniswitchPool', (accounts) => {
 
       await expect(
         pool.connect(user).initializePool(tokenPooled, { value: weiPooled }),
-      ).to.be.revertedWith('UniswitchPool: pool already has liquidity');
+      ).to.be.revertedWith('UniswitchPool: Pool already has liquidity');
     });
   });
 
@@ -117,7 +117,7 @@ describe('UniswitchPool', (accounts) => {
           weiDepositForInit,
         );
 
-      const { expectedShareAmount, expectedTokenAmount } = computeShareReceived(
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
         weiProvided,
         weiDepositForInit,
         tokenDepositForInit,
@@ -149,7 +149,7 @@ describe('UniswitchPool', (accounts) => {
         weiDepositForInit,
       );
 
-      const { expectedShareAmount, expectedTokenAmount } = computeShareReceived(
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
         weiProvided,
         weiDepositForInit,
         tokenDepositForInit,
@@ -173,7 +173,7 @@ describe('UniswitchPool', (accounts) => {
     it('should not provide liquidity if pool not initialized', async () => {
       await expect(
         pool.connect(user).provideLiquidity(0, { value: weiProvided }),
-      ).to.be.revertedWith('UniswitchPool: pool not initialized');
+      ).to.be.revertedWith('UniswitchPool: Pool not initialized');
     });
 
     it('should not provide liquidity if not enough share received', async () => {
@@ -184,7 +184,7 @@ describe('UniswitchPool', (accounts) => {
         weiDepositForInit,
       );
 
-      const { expectedShareAmount } = computeShareReceived(
+      const { expectedShareAmount } = computeSharesAmount(
         weiProvided,
         weiDepositForInit,
         tokenDepositForInit,
@@ -200,36 +200,184 @@ describe('UniswitchPool', (accounts) => {
   });
 
   describe('withdrawLiquidity', () => {
-    // it('should divest liquidity', async () => {
-    //   const weiDivested = 8000;
-    //   const [initialWeiBalance, initialTokenBalance] = await getBalances(pool.address, token);
-    //   const [initialUserShares, initialTotalShares] = await getPoolShares(accounts[0], pool);
-    //   const [expectedShareAmount, expectedTokenAmount] = computeShareFlow(
-    //     weiDivested,
-    //     initialWeiBalance,
-    //     initialTokenBalance,
-    //     initialTotalShares,
-    //   );
-    //   await pool.divestLiquidity(weiDivested, 0);
-    //   const [finalWeiBalance, finalTokenBalance] = await getBalances(pool.address, token);
-    //   const [finalUserShares, finalTotalShares] = await getPoolShares(accounts[0], pool);
-    //   assert.equal(initialWeiBalance - finalWeiBalance, weiDivested, 'Wrong pool wei final amount');
-    //   assert.equal(
-    //     initialTokenBalance - finalTokenBalance,
-    //     expectedTokenAmount,
-    //     'Wrong pool token final amount',
-    //   );
-    //   assert.equal(
-    //     initialUserShares - finalUserShares,
-    //     expectedShareAmount,
-    //     'Wrong user share final amount',
-    //   );
-    //   assert.equal(
-    //     initialTotalShares - finalTotalShares,
-    //     expectedShareAmount,
-    //     'Wrong total share final amount',
-    //   );
-    // });
+    const weiDepositForInit = BigNumber.from(2000000);
+    const tokenDepositForInit = BigNumber.from(1000000);
+
+    beforeEach(async () => {
+      await pool.initializePool(tokenDepositForInit, {
+        value: weiDepositForInit,
+      });
+    });
+
+    it('should withdraw liquidity', async () => {
+      const weiWithdrew = BigNumber.from(8000);
+
+      const { userShares: initialUserShares, totalShares: initialTotalShares } =
+        await getPoolShares(owner.address, pool);
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        weiDepositForInit,
+        tokenDepositForInit,
+        initialTotalShares,
+      );
+
+      await pool.withdrawLiquidity(weiWithdrew, 0);
+
+      const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
+        await getBalances(pool.address, token.balanceOf);
+      const { userShares: finalUserShares, totalShares: finalTotalShares } =
+        await getPoolShares(owner.address, pool);
+
+      expect(weiDepositForInit.sub(finalWeiBalance)).equal(weiWithdrew);
+      expect(tokenDepositForInit.sub(finalTokenBalance)).equal(
+        expectedTokenAmount,
+      );
+      expect(initialUserShares.sub(finalUserShares)).equal(expectedShareAmount);
+      expect(initialTotalShares.sub(finalTotalShares)).equal(
+        expectedShareAmount,
+      );
+    });
+
+    it('should should emit LiquidityWithdrew event', async () => {
+      const weiWithdrew = BigNumber.from(8000);
+
+      const { totalShares } = await getPoolShares(owner.address, pool);
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        weiDepositForInit,
+        tokenDepositForInit,
+        totalShares,
+      );
+
+      await expect(pool.withdrawLiquidity(weiWithdrew, 0))
+        .to.emit(pool, 'LiquidityWithdrew')
+        .withArgs(
+          owner.address,
+          expectedShareAmount,
+          weiWithdrew,
+          expectedTokenAmount,
+        );
+    });
+
+    it('should withdraw all liquidity', async () => {
+      it('should divest liquidity', async () => {
+        await pool.withdrawLiquidity(weiDepositForInit, 0);
+
+        const { weiBalance, tokenBalance } = await getBalances(
+          pool.address,
+          token.balanceOf,
+        );
+        const { userShares, totalShares } = await getPoolShares(
+          owner.address,
+          pool,
+        );
+
+        expect(weiBalance).equal(0);
+        expect(tokenBalance).equal(0);
+        expect(userShares).equal(0);
+        expect(totalShares).equal(0);
+      });
+    });
+
+    it('should correctly withdraw after provide for provider', async () => {
+      await pool.connect(user).provideLiquidity(0, { value: 10000000 });
+
+      const weiWithdrew = BigNumber.from(8000);
+
+      const {
+        weiBalance: initialWeiBalance,
+        tokenBalance: initialTokenBalance,
+      } = await getBalances(pool.address, token.balanceOf);
+      const { userShares: initialUserShares, totalShares: initialTotalShares } =
+        await getPoolShares(user.address, pool);
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        initialWeiBalance,
+        initialTokenBalance,
+        initialTotalShares,
+      );
+
+      await pool.connect(user).withdrawLiquidity(weiWithdrew, 0);
+
+      const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
+        await getBalances(pool.address, token.balanceOf);
+      const { userShares: finalUserShares, totalShares: finalTotalShares } =
+        await getPoolShares(user.address, pool);
+
+      expect(initialWeiBalance.sub(finalWeiBalance)).equal(weiWithdrew);
+      expect(initialTokenBalance.sub(finalTokenBalance)).equal(
+        expectedTokenAmount,
+      );
+      expect(initialUserShares.sub(finalUserShares)).equal(expectedShareAmount);
+      expect(initialTotalShares.sub(finalTotalShares)).equal(
+        expectedShareAmount,
+      );
+    });
+
+    it('should correctly withdraw after provide for initiator', async () => {
+      await pool.connect(user).provideLiquidity(0, { value: 10000000 });
+
+      const weiWithdrew = BigNumber.from(8000);
+
+      const {
+        weiBalance: initialWeiBalance,
+        tokenBalance: initialTokenBalance,
+      } = await getBalances(pool.address, token.balanceOf);
+      const { userShares: initialUserShares, totalShares: initialTotalShares } =
+        await getPoolShares(owner.address, pool);
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        initialWeiBalance,
+        initialTokenBalance,
+        initialTotalShares,
+      );
+
+      await pool.withdrawLiquidity(weiWithdrew, 0);
+
+      const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
+        await getBalances(pool.address, token.balanceOf);
+      const { userShares: finalUserShares, totalShares: finalTotalShares } =
+        await getPoolShares(owner.address, pool);
+
+      expect(initialWeiBalance.sub(finalWeiBalance)).equal(weiWithdrew);
+      expect(initialTokenBalance.sub(finalTokenBalance)).equal(
+        expectedTokenAmount,
+      );
+      expect(initialUserShares.sub(finalUserShares)).equal(expectedShareAmount);
+      expect(initialTotalShares.sub(finalTotalShares)).equal(
+        expectedShareAmount,
+      );
+    });
+
+    it('should not withdraw more than provided', async () => {
+      const weiProvided = BigNumber.from(80000);
+      await pool.connect(user).provideLiquidity(0, { value: weiProvided });
+
+      await expect(pool.connect(user).withdrawLiquidity(weiProvided.add(1), 0))
+        .to.be.reverted;
+    });
+
+    it('should not withdraw if not enough tokens in return', async () => {
+      const weiWithdrew = BigNumber.from(8000);
+
+      const { totalShares } = await getPoolShares(owner.address, pool);
+      const { expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        weiDepositForInit,
+        tokenDepositForInit,
+        totalShares,
+      );
+
+      await expect(
+        pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount.add(1)),
+      ).to.be.revertedWith('UniswitchPool: Not enough token in return');
+    });
+
+    it('should not withdraw if not enough liquidity', async () => {
+      await expect(
+        pool.withdrawLiquidity(weiDepositForInit.add(1), 0),
+      ).to.be.revertedWith('UniswitchPool: Not enough shares in the pool');
+    });
   });
 
   // it('should switch eth to token', async () => {

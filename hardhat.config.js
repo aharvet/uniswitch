@@ -7,7 +7,7 @@ require('hardhat-tracer');
 require('solidity-coverage');
 
 // Macros
-const showGasReporter = true;
+const showGasReporter = false;
 
 const params = {
   solidity: {
