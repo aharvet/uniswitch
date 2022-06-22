@@ -7,13 +7,12 @@ const {
 const {
   getBalances,
   getPoolShares,
-  computeSwitchInAmount,
   computeSwitchOutAmount,
   computeSharesAmount,
   initPoolAndReturnSharesData,
 } = require('./utils');
 
-describe('UniswitchPool', (accounts) => {
+describe('UniswitchPool', () => {
   const oneWith18Decimals = utils.parseUnits('1', 18);
 
   let owner, user;
@@ -502,25 +501,74 @@ describe('UniswitchPool', (accounts) => {
         ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
       });
     });
+
+    describe('tokenToEthSwitch', () => {
+      it('should switch eth for token', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedWeiAmount = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        const tx = await pool
+          .connect(user)
+          .tokenToEthSwitch(amountSwitched, expectedWeiAmount);
+        const { events } = await tx.wait();
+
+        const {
+          weiBalance: finalPoolWeiBalance,
+          tokenBalance: finalPoolTokenBalance,
+        } = await getBalances(pool.address, token.balanceOf);
+
+        expect(weiDepositForInit.sub(finalPoolWeiBalance)).to.equal(
+          expectedWeiAmount,
+        );
+        expect(finalPoolTokenBalance.sub(tokenDepositForInit)).to.equal(
+          amountSwitched,
+        );
+        expect(events[events.length - 1].args.weiOut).to.equal(
+          expectedWeiAmount,
+        );
+      });
+
+      it('should emit TokenToEthSwitched event', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedWeiAmount = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToEthSwitch(amountSwitched, expectedWeiAmount),
+        )
+          .to.emit(pool, 'TokenToEthSwitched')
+          .withArgs(user.address, amountSwitched, expectedWeiAmount);
+      });
+
+      it('should not swith tokens for eth if not enough eth out', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedWeiAmount = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToEthSwitch(amountSwitched, expectedWeiAmount.add(1)),
+        ).to.be.revertedWith('UniswitchPool: Not enough wei received');
+      });
+    });
   });
-
-  // it('should switch token to eth', async () => {
-  //   const weiPooled = 10000000000;
-  //   const tokenPooled = 20000000000;
-  //   await pool.connect(user).initializePool(tokenPooled, { value: weiPooled });
-
-  //   const initialUserWeiBalance = await provider.getBalance(user.address);
-  //   const amountSwitched = 10000000;
-  //   const expectedWeiAmount = computeSwitchOutAmount(amountSwitched, tokenPooled, weiPooled);
-
-  //   await pool.connect(user).tokenToEthSwitch(amountSwitched, 0, { gasPrice: 0 });
-
-  //   const { weiBalance: finalPoolWeiBalance, tokenBalance: finalPoolTokenBalance } =
-  //     await getBalances(pool.address, token);
-  //   const finalUserWeiBalance = await provider.getBalance(user.address);
-
-  //   expect(finalPoolTokenBalance - tokenPooled).to.equal(amountSwitched);
-  //   expect(weiPooled - finalPoolWeiBalance).to.equal(expectedWeiAmount);
-  //   expect(finalUserWeiBalance.sub(initialUserWeiBalance)).to.equal(expectedWeiAmount);
-  // });
 });

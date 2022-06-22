@@ -38,12 +38,7 @@ contract UniswitchPool {
         uint256 tokenAmount
     );
     event EthToTokenSwitched(address user, uint256 weiIn, uint256 tokenOut);
-    event TokenToEthSwitched(
-        address user,
-        address token,
-        uint256 tokenIn,
-        uint256 weiOut
-    );
+    event TokenToEthSwitched(address user, uint256 tokenIn, uint256 weiOut);
     event TokenToTokenSwitchedPoolA(
         address user,
         address token1,
@@ -163,12 +158,7 @@ contract UniswitchPool {
     function tokenToEthSwitch(uint256 tokenAmount, uint256 minWeiOut) external {
         uint256 weiOut = tokenInHandler(msg.sender, tokenAmount, minWeiOut);
 
-        emit TokenToEthSwitched(
-            msg.sender,
-            address(token),
-            tokenAmount,
-            weiOut
-        );
+        emit TokenToEthSwitched(msg.sender, tokenAmount, weiOut);
 
         payable(msg.sender).sendValue(weiOut);
     }
@@ -240,20 +230,20 @@ contract UniswitchPool {
 
     function tokenInHandler(
         address to,
-        uint256 _tokenAmount,
-        uint256 _minWeiOut
+        uint256 tokenAmount,
+        uint256 minWeiOut
     ) private returns (uint256) {
-        uint256 _tokenBalance = token.balanceOf(address(this)).add(
-            _tokenAmount
+        uint256 newTokenBalance = token.balanceOf(address(this)).add(
+            tokenAmount
         );
-        // computes the rate of wei per token inside the pool, and multiply it by the amount of token to switch
-        uint256 _weiOut = _tokenAmount.mul(address(this).balance).div(
-            _tokenBalance
-        );
+        uint256 fee = tokenAmount.div(FEE_RATE);
+        uint256 newWeiBalance = k.div(newTokenBalance.sub(fee));
+        uint256 weiOut = address(this).balance.sub(newWeiBalance);
 
-        require(_weiOut >= _minWeiOut, "Not enough token provided");
-        token.safeTransferFrom(to, address(this), _tokenAmount);
+        require(weiOut >= minWeiOut, "UniswitchPool: Not enough wei received");
 
-        return _weiOut;
+        token.safeTransferFrom(to, address(this), tokenAmount);
+
+        return weiOut;
     }
 }

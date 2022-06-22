@@ -29,20 +29,6 @@ contract('Unhappy Paths', (accounts) => {
     );
   });
 
-  it('should NOT switch eth to token if not enough token in return', async () => {
-    await expectRevert(
-      pool.ethToTokenSwitch(100000000, { value: 100 }),
-      'Not enough wei provided',
-    );
-  });
-
-  it('should NOT switch token to eth if not enough wei in return', async () => {
-    await expectRevert(
-      pool.tokenToEthSwitch(100, 100000000),
-      'Not enough token provided',
-    );
-  });
-
   it('should NOT switch token to token if not enough token in return', async () => {
     const token2 = await TestToken.new('Test Token 2', 'TTK2');
     await token2.mint(accounts[0], web3.utils.toWei('1', 'ether'));
