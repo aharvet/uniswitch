@@ -3,13 +3,19 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./IUniswitchFactory.sol";
 
 import "hardhat/console.sol";
 
 contract UniswitchPool {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+    using Address for address payable;
+
+    uint256 k;
 
     IUniswitchFactory public immutable factory;
     IERC20 public immutable token;
@@ -30,12 +36,7 @@ contract UniswitchPool {
         uint256 weiAmount,
         uint256 tokenAmount
     );
-    event EthToTokenSwitched(
-        address user,
-        address token,
-        uint256 weiIn,
-        uint256 tokenOut
-    );
+    event EthToTokenSwitched(address user, uint256 weiIn, uint256 tokenOut);
     event TokenToEthSwitched(
         address user,
         address token,
@@ -78,10 +79,11 @@ contract UniswitchPool {
 
         shares[msg.sender] = 100000000;
         totalShares = 100000000;
+        k = msg.value.mul(tokenAmount);
 
         emit PoolInitialized(address(this), msg.value, tokenAmount);
 
-        token.transferFrom(msg.sender, address(this), tokenAmount);
+        token.safeTransferFrom(msg.sender, address(this), tokenAmount);
     }
 
     function provideLiquidity(uint256 minShares) external payable {
@@ -118,7 +120,7 @@ contract UniswitchPool {
             tokenAmount
         );
 
-        token.transferFrom(msg.sender, address(this), tokenAmount);
+        token.safeTransferFrom(msg.sender, address(this), tokenAmount);
     }
 
     function withdrawLiquidity(uint256 weiAmount, uint256 minToken) external {
@@ -147,34 +149,27 @@ contract UniswitchPool {
         emit LiquidityWithdrew(msg.sender, sharesAmount, weiAmount, tokenOut);
 
         // Will revert if not enough wei or tokens in the pool
-        token.transfer(msg.sender, tokenOut);
-        msg.sender.transfer(weiAmount);
+        token.safeTransfer(msg.sender, tokenOut);
+        payable(msg.sender).sendValue(weiAmount);
     }
 
-    function ethToTokenSwitch(uint256 _minTokenOut) external payable {
-        uint256 _tokenOut = ethInHandler(msg.sender, _minTokenOut, false);
+    function ethToTokenSwitch(uint256 minTokenOut) external payable {
+        uint256 tokenOut = ethInHandler(msg.sender, minTokenOut, false);
 
-        emit EthToTokenSwitched(
-            msg.sender,
-            address(token),
-            msg.value,
-            _tokenOut
-        );
+        emit EthToTokenSwitched(msg.sender, msg.value, tokenOut);
     }
 
-    function tokenToEthSwitch(uint256 _tokenAmount, uint256 _minWeiOut)
-        external
-    {
-        uint256 _weiOut = tokenInHandler(msg.sender, _tokenAmount, _minWeiOut);
+    function tokenToEthSwitch(uint256 tokenAmount, uint256 minWeiOut) external {
+        uint256 weiOut = tokenInHandler(msg.sender, tokenAmount, minWeiOut);
 
         emit TokenToEthSwitched(
             msg.sender,
             address(token),
-            _tokenAmount,
-            _weiOut
+            tokenAmount,
+            weiOut
         );
 
-        msg.sender.transfer(_weiOut);
+        payable(msg.sender).sendValue(weiOut);
     }
 
     function tokenToTokenSwitch(
@@ -219,30 +214,31 @@ contract UniswitchPool {
     }
 
     function ethInHandler(
-        address _to,
-        uint256 _minTokenOut,
-        bool _tokenToToken
+        address to,
+        uint256 minTokenOut,
+        bool tokenToToken
     ) private returns (uint256) {
-        uint256 _tokenBalance = token.balanceOf(address(this));
-        // computes the rate of token per wei inside the pool, and multiply it by the amount of wei to switch
-        uint256 _tokenOut = msg.value.mul(_tokenBalance).div(
+        uint256 tokenBalance = token.balanceOf(address(this));
+        // Computes the rate of tokens per wei inside the pool, and multiply it
+        // by the amount of wei to switch
+        uint256 tokenOut = msg.value.mul(tokenBalance).div(
             address(this).balance
         );
 
         require(
-            _tokenOut >= _minTokenOut,
-            _tokenToToken
+            tokenOut >= minTokenOut,
+            tokenToToken
                 ? "Not enough token provided"
                 : "Not enough wei provided"
         );
 
-        token.transfer(_to, _tokenOut);
+        token.safeTransfer(to, tokenOut);
 
-        return _tokenOut;
+        return tokenOut;
     }
 
     function tokenInHandler(
-        address _to,
+        address to,
         uint256 _tokenAmount,
         uint256 _minWeiOut
     ) private returns (uint256) {
@@ -255,7 +251,7 @@ contract UniswitchPool {
         );
 
         require(_weiOut >= _minWeiOut, "Not enough token provided");
-        token.transferFrom(_to, address(this), _tokenAmount);
+        token.safeTransferFrom(to, address(this), _tokenAmount);
 
         return _weiOut;
     }
