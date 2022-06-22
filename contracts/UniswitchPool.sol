@@ -155,7 +155,7 @@ contract UniswitchPool {
     }
 
     function ethToTokenSwitch(uint256 minTokenOut) external payable {
-        uint256 tokenOut = ethInHandler(msg.sender, minTokenOut, false);
+        uint256 tokenOut = ethInHandler(msg.sender, minTokenOut);
 
         emit EthToTokenSwitched(msg.sender, msg.value, tokenOut);
     }
@@ -204,7 +204,7 @@ contract UniswitchPool {
         address tokenAssociated = factory.poolToToken(msg.sender);
         require(tokenAssociated != address(0), "Sender is not a pool");
 
-        uint256 _tokenOut = ethInHandler(_to, _minTokenOut, true);
+        uint256 _tokenOut = ethInHandler(_to, _minTokenOut);
 
         emit TokenToTokenSwitchedPoolB(
             _to,
@@ -214,11 +214,10 @@ contract UniswitchPool {
         );
     }
 
-    function ethInHandler(
-        address to,
-        uint256 minTokenOut,
-        bool tokenToToken
-    ) private returns (uint256) {
+    function ethInHandler(address to, uint256 minTokenOut)
+        private
+        returns (uint256)
+    {
         uint256 newWeiBalance = address(this).balance;
         uint256 fee = msg.value.div(FEE_RATE);
         uint256 currentTokenBalance = token.balanceOf(address(this));
@@ -229,9 +228,7 @@ contract UniswitchPool {
 
         require(
             tokenOut >= minTokenOut,
-            tokenToToken
-                ? "UniswitchPool: Not enough token provided"
-                : "UniswitchPool: Not enough tokens received"
+            "UniswitchPool: Not enough tokens received"
         );
 
         k = newWeiBalance.mul(newTokenBalance);

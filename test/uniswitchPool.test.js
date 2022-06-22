@@ -7,6 +7,7 @@ const {
 const {
   getBalances,
   getPoolShares,
+  computeSwitchInAmount,
   computeSwitchOutAmount,
   computeSharesAmount,
   initPoolAndReturnSharesData,
@@ -126,7 +127,9 @@ describe('UniswitchPool', (accounts) => {
         initialTotalShares,
       );
 
-      await pool.connect(user).provideLiquidity(0, { value: weiProvided });
+      await pool
+        .connect(user)
+        .provideLiquidity(expectedShareAmount, { value: weiProvided });
 
       const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
         await getBalances(pool.address, token.balanceOf);
@@ -160,7 +163,7 @@ describe('UniswitchPool', (accounts) => {
 
       const tx = await pool
         .connect(user)
-        .provideLiquidity(0, { value: weiProvided });
+        .provideLiquidity(expectedShareAmount, { value: weiProvided });
 
       await expect(tx)
         .to.emit(pool, 'LiquidityProvided')
@@ -223,7 +226,7 @@ describe('UniswitchPool', (accounts) => {
         initialTotalShares,
       );
 
-      await pool.withdrawLiquidity(weiWithdrew, 0);
+      await pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount);
 
       const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
         await getBalances(pool.address, token.balanceOf);
@@ -251,7 +254,7 @@ describe('UniswitchPool', (accounts) => {
         totalShares,
       );
 
-      await expect(pool.withdrawLiquidity(weiWithdrew, 0))
+      await expect(pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount))
         .to.emit(pool, 'LiquidityWithdrew')
         .withArgs(
           owner.address,
@@ -299,7 +302,9 @@ describe('UniswitchPool', (accounts) => {
         initialTotalShares,
       );
 
-      await pool.connect(user).withdrawLiquidity(weiWithdrew, 0);
+      await pool
+        .connect(user)
+        .withdrawLiquidity(weiWithdrew, expectedTokenAmount);
 
       const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
         await getBalances(pool.address, token.balanceOf);
@@ -334,7 +339,42 @@ describe('UniswitchPool', (accounts) => {
         initialTotalShares,
       );
 
-      await pool.withdrawLiquidity(weiWithdrew, 0);
+      await pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount);
+
+      const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
+        await getBalances(pool.address, token.balanceOf);
+      const { userShares: finalUserShares, totalShares: finalTotalShares } =
+        await getPoolShares(owner.address, pool);
+
+      expect(initialWeiBalance.sub(finalWeiBalance)).equal(weiWithdrew);
+      expect(initialTokenBalance.sub(finalTokenBalance)).equal(
+        expectedTokenAmount,
+      );
+      expect(initialUserShares.sub(finalUserShares)).equal(expectedShareAmount);
+      expect(initialTotalShares.sub(finalTotalShares)).equal(
+        expectedShareAmount,
+      );
+    });
+
+    it('should correctly withdraw after switch', async () => {
+      await pool.connect(user).ethToTokenSwitch(0, { value: 10000000 });
+
+      const weiWithdrew = BigNumber.from(8000);
+
+      const {
+        weiBalance: initialWeiBalance,
+        tokenBalance: initialTokenBalance,
+      } = await getBalances(pool.address, token.balanceOf);
+      const { userShares: initialUserShares, totalShares: initialTotalShares } =
+        await getPoolShares(owner.address, pool);
+      const { expectedShareAmount, expectedTokenAmount } = computeSharesAmount(
+        weiWithdrew,
+        initialWeiBalance,
+        initialTokenBalance,
+        initialTotalShares,
+      );
+
+      await pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount);
 
       const { weiBalance: finalWeiBalance, tokenBalance: finalTokenBalance } =
         await getBalances(pool.address, token.balanceOf);
@@ -353,6 +393,7 @@ describe('UniswitchPool', (accounts) => {
 
     it('should not withdraw more than provided', async () => {
       const weiProvided = BigNumber.from(80000);
+
       await pool.connect(user).provideLiquidity(0, { value: weiProvided });
 
       await expect(pool.connect(user).withdrawLiquidity(weiProvided.add(1), 0))
@@ -380,11 +421,9 @@ describe('UniswitchPool', (accounts) => {
         pool.withdrawLiquidity(weiDepositForInit.add(1), 0),
       ).to.be.revertedWith('UniswitchPool: Not enough shares in the pool');
     });
-
-    // correctly withdraw after switch
   });
 
-  describe('swithes', () => {
+  describe('Switch', () => {
     const weiDepositForInit = BigNumber.from(200000000);
     const tokenDepositForInit = BigNumber.from(100000000000);
 
@@ -406,8 +445,9 @@ describe('UniswitchPool', (accounts) => {
           await pool.FEE_RATE(),
         );
 
-        await pool.connect(user).ethToTokenSwitch(0, { value: amountSwitched });
-        // await tx.wait();
+        await pool
+          .connect(user)
+          .ethToTokenSwitch(expectedTokenAmount, { value: amountSwitched });
 
         const {
           weiBalance: finalPoolWeiBalance,
@@ -424,6 +464,42 @@ describe('UniswitchPool', (accounts) => {
         expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(
           expectedTokenAmount,
         );
+      });
+
+      it('should emit EthToTokenSwitched event', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedTokenAmount = computeSwitchOutAmount(
+          amountSwitched,
+          weiDepositForInit,
+          tokenDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .ethToTokenSwitch(expectedTokenAmount, { value: amountSwitched }),
+        )
+          .to.emit(pool, 'EthToTokenSwitched')
+          .withArgs(user.address, amountSwitched, expectedTokenAmount);
+      });
+
+      it('should not swith eth for tokens if not enough tokens out', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedTokenAmount = computeSwitchOutAmount(
+          amountSwitched,
+          weiDepositForInit,
+          tokenDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool.connect(user).ethToTokenSwitch(expectedTokenAmount.add(1), {
+            value: amountSwitched,
+          }),
+        ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
       });
     });
   });

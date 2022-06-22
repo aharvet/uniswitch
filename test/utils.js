@@ -1,3 +1,4 @@
+const { BigNumber } = require('ethers');
 const {
   waffle: { provider },
 } = require('hardhat');
@@ -14,6 +15,25 @@ const getPoolShares = async (addr, pool) => {
   return { userShares, totalShares };
 };
 
+const computeSwitchInAmount = (
+  amountOut,
+  coinInBalance,
+  coinOutBalance,
+  feeRate,
+) => {
+  if (amountOut.gte(coinOutBalance))
+    throw new Error('amountOut >= coinOutBalance');
+  const one = BigNumber.from(1);
+
+  const newCoinOutBalance = coinOutBalance.sub(amountOut);
+  const invariant = coinInBalance.mul(coinOutBalance);
+  const newCoinInBalanceWithoutFee = invariant.div(newCoinOutBalance);
+  const amountInWithoutFee = newCoinInBalanceWithoutFee.sub(coinInBalance);
+  const amountIn = amountInWithoutFee.div(one.sub(one.div(feeRate)));
+
+  return amountIn;
+};
+
 const computeSwitchOutAmount = (
   amountIn,
   coinInBalance,
@@ -24,7 +44,9 @@ const computeSwitchOutAmount = (
   const newCoinInBalance = coinInBalance.add(amountIn);
   const invariant = coinInBalance.mul(coinOutBalance);
   const newCoinOutBalance = invariant.div(newCoinInBalance.sub(fee));
-  return coinOutBalance.sub(newCoinOutBalance);
+  const amountOut = coinOutBalance.sub(newCoinOutBalance);
+
+  return amountOut;
 };
 
 const computeSharesAmount = (
@@ -63,6 +85,7 @@ const initPoolAndReturnSharesData = async (
 module.exports = {
   getBalances,
   getPoolShares,
+  computeSwitchInAmount,
   computeSwitchOutAmount,
   computeSharesAmount,
   initPoolAndReturnSharesData,
