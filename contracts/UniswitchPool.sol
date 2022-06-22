@@ -15,7 +15,8 @@ contract UniswitchPool {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
-    uint256 k;
+    uint256 public constant FEE_RATE = 400; // 0.25%
+    uint256 public k;
 
     IUniswitchFactory public immutable factory;
     IERC20 public immutable token;
@@ -218,19 +219,22 @@ contract UniswitchPool {
         uint256 minTokenOut,
         bool tokenToToken
     ) private returns (uint256) {
-        uint256 tokenBalance = token.balanceOf(address(this));
-        // Computes the rate of tokens per wei inside the pool, and multiply it
-        // by the amount of wei to switch
-        uint256 tokenOut = msg.value.mul(tokenBalance).div(
-            address(this).balance
-        );
+        uint256 newWeiBalance = address(this).balance;
+        uint256 fee = msg.value.div(FEE_RATE);
+        uint256 currentTokenBalance = token.balanceOf(address(this));
+        // Cannot underflow because due to its computation, fee is always lower
+        // than newWeiBalance
+        uint256 newTokenBalance = k.div(newWeiBalance - fee);
+        uint256 tokenOut = currentTokenBalance.sub(newTokenBalance);
 
         require(
             tokenOut >= minTokenOut,
             tokenToToken
-                ? "Not enough token provided"
-                : "Not enough wei provided"
+                ? "UniswitchPool: Not enough token provided"
+                : "UniswitchPool: Not enough tokens received"
         );
+
+        k = newWeiBalance.mul(newTokenBalance);
 
         token.safeTransfer(to, tokenOut);
 

@@ -95,8 +95,8 @@ Emits a "TokenToTokenSwitchedPoolA" event from the first pool, and "TokenToToken
 
 - PoolLaunched(address token, address pool)
 - PoolInitialized(address pool, address token, uint256 weiAmount, uint256 tokenAmount)
-- EthToTokenSwitched(address user, address token, uint256 weiIn, uint256 tokenOut)
-- TokenToEthSwitched(address user, address token, uint256 tokenIn, uint256 weiOut)
+- EthToTokenSwitched(address user, uint256 weiIn, uint256 tokenOut)
+- TokenToEthSwitched(address user, uint256 tokenIn, uint256 weiOut)
 - TokenToTokenSwitchedPoolA(address user, address token1, address token2, uint256 tokenIn, uint256 weiOut)
 - TokenToTokenSwitchedPoolB(address user, address token2, uint256 weiIn, uint256 tokenOut)
 - LiquidityProvided(address user, uint256 sharesCreated, uint256 weiAmount, uint256 tokenAmount)
