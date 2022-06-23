@@ -3,18 +3,19 @@ require('dotenv').config();
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
 require('@nomiclabs/hardhat-etherscan');
-require('hardhat-tracer');
 require('solidity-coverage');
+require('hardhat-tracer');
 
 // Macros
 const showGasReporter = false;
+const enableOptimizer = true;
 
-const params = {
+module.exports = {
   solidity: {
     version: '0.6.12',
     settings: {
       optimizer: {
-        enabled: showGasReporter || false,
+        enabled: showGasReporter || enableOptimizer,
         runs: 999999,
       },
     },
@@ -22,6 +23,10 @@ const params = {
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0,
+    },
+    goerli: {
+      url: process.env.GOERLI_ENDPOINT || '',
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY] || '',
     },
   },
   gasReporter: {
@@ -33,13 +38,3 @@ const params = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
-
-const { ROPSTEN_ENDPOINT, DEPLOYER_PRIVATE_KEY } = process.env;
-if (ROPSTEN_ENDPOINT && DEPLOYER_PRIVATE_KEY) {
-  params.networks.ropsten = {
-    url: process.env.ROPSTEN_ENDPOINT,
-    accounts: process.env.DEPLOYER_PRIVATE_KEY,
-  };
-}
-
-module.exports = params;

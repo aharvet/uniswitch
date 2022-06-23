@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "prettier": "prettier --write 'contracts/**/*.sol",
+    "deploy:goerli": "hardhat run scripts/deploy.js --network goerli",
     "test": "hardhat test",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "prettier": "prettier --write 'contracts/**/*.sol"
   },
   "author": "Alexandre Wolff",
   "license": "MIT",

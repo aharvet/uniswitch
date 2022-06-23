@@ -14,13 +14,13 @@ contract UniswitchFactory {
         require(token != address(0), "UniswitchFactory: Zero address provided");
         require(
             tokenToPool[token] == address(0),
-            "UniswitchFactory: pool already created for token"
+            "UniswitchFactory: Pool already created for token"
         );
 
-        address newPool = address(new UniswitchPool(token));
-        tokenToPool[token] = newPool;
-        poolToToken[newPool] = token;
+        address pool = address(new UniswitchPool(token));
+        tokenToPool[token] = pool;
+        poolToToken[pool] = token;
 
-        emit PoolLaunched(token, newPool);
+        emit PoolLaunched(token, pool);
     }
 }

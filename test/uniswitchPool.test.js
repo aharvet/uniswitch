@@ -79,7 +79,7 @@ describe('UniswitchPool', () => {
 
       await expect(tx)
         .to.emit(pool, 'PoolInitialized')
-        .withArgs(pool.address, weiPooled, tokenPooled);
+        .withArgs(weiPooled, tokenPooled);
     });
 
     it('should not initialize pool with less than 100000 ether', async () => {

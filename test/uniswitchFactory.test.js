@@ -1,17 +1,18 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
-
-const { ZERO_ADDRESS } = require('./utils');
+const {
+  ethers: {
+    getContractFactory,
+    constants: { AddressZero },
+  },
+} = require('hardhat');
 
 describe('UniswitchFactory', () => {
   let token;
   let factory;
 
   beforeEach(async () => {
-    const TestToken = await ethers.getContractFactory('TestToken');
-    const UniswitchFactory = await ethers.getContractFactory(
-      'UniswitchFactory',
-    );
+    const TestToken = await getContractFactory('TestToken');
+    const UniswitchFactory = await getContractFactory('UniswitchFactory');
 
     token = await TestToken.deploy('Test Token', 'TTK');
     factory = await UniswitchFactory.deploy();
@@ -35,7 +36,7 @@ describe('UniswitchFactory', () => {
   });
 
   it('should not lauch a pool with zero address', async () => {
-    await expect(factory.launchPool(ZERO_ADDRESS)).to.be.revertedWith(
+    await expect(factory.launchPool(AddressZero)).to.be.revertedWith(
       'UniswitchFactory: Zero address provided',
     );
   });
@@ -43,7 +44,7 @@ describe('UniswitchFactory', () => {
   it('should not lauch a pool if there is already one for the token', async () => {
     await factory.launchPool(token.address);
     await expect(factory.launchPool(token.address)).to.be.revertedWith(
-      'UniswitchFactory: pool already created for token',
+      'UniswitchFactory: Pool already created for token',
     );
   });
 });

@@ -16,15 +16,15 @@ contract UniswitchPool {
     using Address for address payable;
 
     uint256 public constant FEE_RATE = 400; // 0.25%
+    uint256 public totalShares;
     uint256 public k;
 
     IUniswitchFactory public immutable factory;
     IERC20 public immutable token;
 
     mapping(address => uint256) public shares;
-    uint256 public totalShares = 0;
 
-    event PoolInitialized(address pool, uint256 weiAmount, uint256 tokenAmount);
+    event PoolInitialized(uint256 weiAmount, uint256 tokenAmount);
     event LiquidityProvided(
         address provider,
         uint256 sharesCreated,
@@ -76,11 +76,11 @@ contract UniswitchPool {
 
         token.safeTransferFrom(msg.sender, address(this), tokenAmount);
 
-        emit PoolInitialized(address(this), msg.value, tokenAmount);
+        emit PoolInitialized(msg.value, tokenAmount);
     }
 
     function provideLiquidity(uint256 minShares) external payable {
-        uint256 _totalShares = totalShares;
+        uint256 _totalShares = totalShares; // gas savings
         // If no shares in circulation, the pool has no liquidity
         require(_totalShares != 0, "UniswitchPool: Pool not initialized");
 
@@ -117,14 +117,15 @@ contract UniswitchPool {
     }
 
     function withdrawLiquidity(uint256 weiAmount, uint256 minToken) external {
+        uint256 _totalShares = totalShares; // gas savings
         // Computes the rate of shares per wei inside the pool, and multiply it by the amount
         // of wei withdrew to get the corresponding shares amount
-        uint256 sharesAmount = weiAmount.mul(totalShares).div(
+        uint256 sharesAmount = weiAmount.mul(_totalShares).div(
             address(this).balance
         );
         // Computes the number of token per share and multiplies it by the number of shares to burn
         uint256 tokenOut = sharesAmount.mul(token.balanceOf(address(this))).div(
-            totalShares
+            _totalShares
         );
         require(
             tokenOut >= minToken,
