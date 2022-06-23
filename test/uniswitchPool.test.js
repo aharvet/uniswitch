@@ -15,13 +15,13 @@ const {
 describe('UniswitchPool', () => {
   const oneWith18Decimals = utils.parseUnits('1', 18);
 
-  let owner, user;
+  let owner, user, user2;
   let token;
   let factory;
   let pool;
 
   beforeEach(async () => {
-    [owner, user] = await getSigners();
+    [owner, user, user2] = await getSigners();
 
     const TestToken = await getContractFactory('TestToken');
     const UniswitchFactory = await getContractFactory('UniswitchFactory');
@@ -356,7 +356,9 @@ describe('UniswitchPool', () => {
     });
 
     it('should correctly withdraw after switch', async () => {
-      await pool.connect(user).ethToTokenSwitch(0, { value: 10000000 });
+      await pool
+        .connect(user)
+        .ethToTokenSwitch(user.address, 0, { value: 10000000 });
 
       const weiWithdrew = BigNumber.from(8000);
 
@@ -433,7 +435,7 @@ describe('UniswitchPool', () => {
     });
 
     describe('ethToTokenSwitch', () => {
-      it('should switch eth for token', async () => {
+      it('should switch', async () => {
         const amountSwitched = BigNumber.from(1000000);
 
         const initialUserTokenBalance = await token.balanceOf(user.address);
@@ -446,7 +448,9 @@ describe('UniswitchPool', () => {
 
         await pool
           .connect(user)
-          .ethToTokenSwitch(expectedTokenAmount, { value: amountSwitched });
+          .ethToTokenSwitch(user.address, expectedTokenAmount, {
+            value: amountSwitched,
+          });
 
         const {
           weiBalance: finalPoolWeiBalance,
@@ -465,6 +469,78 @@ describe('UniswitchPool', () => {
         );
       });
 
+      it('should switch twice', async () => {
+        const amount1Switched = BigNumber.from(1000000);
+        const amount2Switched = BigNumber.from(53000000);
+
+        const initialUserTokenBalance = await token.balanceOf(user.address);
+
+        const feeRate = await pool.FEE_RATE();
+        const expectedTokenOut1 = computeSwitchOutAmount(
+          amount1Switched,
+          weiDepositForInit,
+          tokenDepositForInit,
+          feeRate,
+        );
+        const expectedTokenOut2 = computeSwitchOutAmount(
+          amount2Switched,
+          weiDepositForInit.add(amount1Switched),
+          tokenDepositForInit.sub(expectedTokenOut1),
+          feeRate,
+        );
+
+        await pool
+          .connect(user)
+          .ethToTokenSwitch(user.address, expectedTokenOut1, {
+            value: amount1Switched,
+          });
+        await pool
+          .connect(user)
+          .ethToTokenSwitch(user.address, expectedTokenOut2, {
+            value: amount2Switched,
+          });
+
+        const {
+          weiBalance: finalPoolWeiBalance,
+          tokenBalance: finalPoolTokenBalance,
+        } = await getBalances(pool.address, token.balanceOf);
+        const finalUserTokenBalance = await token.balanceOf(user.address);
+
+        expect(finalPoolWeiBalance.sub(weiDepositForInit)).to.equal(
+          amount1Switched.add(amount2Switched),
+        );
+        expect(tokenDepositForInit.sub(finalPoolTokenBalance)).to.equal(
+          expectedTokenOut1.add(expectedTokenOut2),
+        );
+        expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(
+          expectedTokenOut1.add(expectedTokenOut2),
+        );
+      });
+
+      it('should receive switch on `to` address', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const initialUserTokenBalance = await token.balanceOf(user2.address);
+        const expectedTokenAmount = computeSwitchOutAmount(
+          amountSwitched,
+          weiDepositForInit,
+          tokenDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await pool
+          .connect(user)
+          .ethToTokenSwitch(user2.address, expectedTokenAmount, {
+            value: amountSwitched,
+          });
+
+        const finalUserTokenBalance = await token.balanceOf(user2.address);
+
+        expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(
+          expectedTokenAmount,
+        );
+      });
+
       it('should emit EthToTokenSwitched event', async () => {
         const amountSwitched = BigNumber.from(1000000);
 
@@ -478,13 +554,20 @@ describe('UniswitchPool', () => {
         await expect(
           pool
             .connect(user)
-            .ethToTokenSwitch(expectedTokenAmount, { value: amountSwitched }),
+            .ethToTokenSwitch(user.address, expectedTokenAmount, {
+              value: amountSwitched,
+            }),
         )
           .to.emit(pool, 'EthToTokenSwitched')
-          .withArgs(user.address, amountSwitched, expectedTokenAmount);
+          .withArgs(
+            user.address,
+            user.address,
+            amountSwitched,
+            expectedTokenAmount,
+          );
       });
 
-      it('should not swith eth for tokens if not enough tokens out', async () => {
+      it('should emit EthToTokenSwitched event with specific `to` address', async () => {
         const amountSwitched = BigNumber.from(1000000);
 
         const expectedTokenAmount = computeSwitchOutAmount(
@@ -495,15 +578,43 @@ describe('UniswitchPool', () => {
         );
 
         await expect(
-          pool.connect(user).ethToTokenSwitch(expectedTokenAmount.add(1), {
-            value: amountSwitched,
-          }),
+          pool
+            .connect(user)
+            .ethToTokenSwitch(user2.address, expectedTokenAmount, {
+              value: amountSwitched,
+            }),
+        )
+          .to.emit(pool, 'EthToTokenSwitched')
+          .withArgs(
+            user.address,
+            user2.address,
+            amountSwitched,
+            expectedTokenAmount,
+          );
+      });
+
+      it('should not switch eth for tokens if not enough tokens out', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedTokenAmount = computeSwitchOutAmount(
+          amountSwitched,
+          weiDepositForInit,
+          tokenDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .ethToTokenSwitch(user.address, expectedTokenAmount.add(1), {
+              value: amountSwitched,
+            }),
         ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
       });
     });
 
     describe('tokenToEthSwitch', () => {
-      it('should switch eth for token', async () => {
+      it('should switch', async () => {
         const amountSwitched = BigNumber.from(1000000);
 
         const expectedWeiAmount = computeSwitchOutAmount(
@@ -515,7 +626,7 @@ describe('UniswitchPool', () => {
 
         const tx = await pool
           .connect(user)
-          .tokenToEthSwitch(amountSwitched, expectedWeiAmount);
+          .tokenToEthSwitch(user.address, amountSwitched, expectedWeiAmount);
         const { events } = await tx.wait();
 
         const {
@@ -534,6 +645,76 @@ describe('UniswitchPool', () => {
         );
       });
 
+      it('should switch twice', async () => {
+        const amount1Switched = BigNumber.from(1000000);
+        const amount2Switched = BigNumber.from(53000000);
+
+        const feeRate = await pool.FEE_RATE();
+        const expectedWeiOut1 = computeSwitchOutAmount(
+          amount1Switched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          feeRate,
+        );
+        const expectedWeiOut2 = computeSwitchOutAmount(
+          amount2Switched,
+          tokenDepositForInit.add(amount1Switched),
+          weiDepositForInit.sub(expectedWeiOut1),
+          feeRate,
+        );
+
+        const tx1 = await pool
+          .connect(user)
+          .tokenToEthSwitch(user.address, amount1Switched, expectedWeiOut1);
+        const { events: events1 } = await tx1.wait();
+        const tx2 = await pool
+          .connect(user)
+          .tokenToEthSwitch(user.address, amount2Switched, expectedWeiOut2);
+        const { events: events2 } = await tx2.wait();
+
+        const weiOut1 = events1[events1.length - 1].args.weiOut;
+        const weiOut2 = events2[events1.length - 1].args.weiOut;
+
+        const {
+          weiBalance: finalPoolWeiBalance,
+          tokenBalance: finalPoolTokenBalance,
+        } = await getBalances(pool.address, token.balanceOf);
+
+        expect(weiDepositForInit.sub(finalPoolWeiBalance)).to.equal(
+          expectedWeiOut1.add(expectedWeiOut2),
+        );
+        expect(finalPoolTokenBalance.sub(tokenDepositForInit)).to.equal(
+          amount1Switched.add(amount2Switched),
+        );
+        expect(weiOut1.add(weiOut2)).to.equal(
+          expectedWeiOut1.add(expectedWeiOut2),
+        );
+      });
+
+      it('should receive switch on `to` address', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const initialUserTokenBalance = await provider.getBalance(
+          user2.address,
+        );
+        const expectedWeiAmount = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await pool
+          .connect(user)
+          .tokenToEthSwitch(user2.address, amountSwitched, expectedWeiAmount);
+
+        const finalUserTokenBalance = await provider.getBalance(user2.address);
+
+        expect(finalUserTokenBalance.sub(initialUserTokenBalance)).to.equal(
+          expectedWeiAmount,
+        );
+      });
+
       it('should emit TokenToEthSwitched event', async () => {
         const amountSwitched = BigNumber.from(1000000);
 
@@ -547,10 +728,39 @@ describe('UniswitchPool', () => {
         await expect(
           pool
             .connect(user)
-            .tokenToEthSwitch(amountSwitched, expectedWeiAmount),
+            .tokenToEthSwitch(user.address, amountSwitched, expectedWeiAmount),
         )
           .to.emit(pool, 'TokenToEthSwitched')
-          .withArgs(user.address, amountSwitched, expectedWeiAmount);
+          .withArgs(
+            user.address,
+            user.address,
+            amountSwitched,
+            expectedWeiAmount,
+          );
+      });
+
+      it('should emit TokenToEthSwitched event with specific `to` address', async () => {
+        const amountSwitched = BigNumber.from(1000000);
+
+        const expectedWeiAmount = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToEthSwitch(user2.address, amountSwitched, expectedWeiAmount),
+        )
+          .to.emit(pool, 'TokenToEthSwitched')
+          .withArgs(
+            user.address,
+            user2.address,
+            amountSwitched,
+            expectedWeiAmount,
+          );
       });
 
       it('should not swith tokens for eth if not enough eth out', async () => {
@@ -566,8 +776,311 @@ describe('UniswitchPool', () => {
         await expect(
           pool
             .connect(user)
-            .tokenToEthSwitch(amountSwitched, expectedWeiAmount.add(1)),
+            .tokenToEthSwitch(
+              user.address,
+              amountSwitched,
+              expectedWeiAmount.add(1),
+            ),
         ).to.be.revertedWith('UniswitchPool: Not enough wei received');
+      });
+    });
+
+    describe('tokenToTokenSwitch', () => {
+      const wei2DepositForInit = BigNumber.from(8000000);
+      const token2DepositForInit = BigNumber.from(3000000000);
+      const amountSwitched = BigNumber.from(2500000);
+
+      let token2;
+      let pool2;
+
+      beforeEach(async () => {
+        const TestToken = await getContractFactory('TestToken');
+        const UniswitchPool = await getContractFactory('UniswitchPool');
+
+        token2 = await TestToken.deploy('Test Token 2', 'TTK2');
+
+        const tx = await factory.launchPool(token2.address);
+        const { events } = await tx.wait();
+        const pool2Address = events[0].args.pool;
+        pool2 = UniswitchPool.attach(pool2Address);
+
+        await token2.mint(owner.address, oneWith18Decimals);
+        await token2.approve(pool2Address, oneWith18Decimals);
+        await pool2.initializePool(token2DepositForInit, {
+          value: wei2DepositForInit,
+        });
+
+        hre.tracer.nameTags[token2.address] = 'TOKEN2';
+        hre.tracer.nameTags[pool2.address] = 'POOL2';
+      });
+
+      it('should switch', async () => {
+        const initialUserBalance = await token2.balanceOf(user.address);
+
+        const expectedWeiOut = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        const expectedTokenOut = computeSwitchOutAmount(
+          expectedWeiOut,
+          wei2DepositForInit,
+          token2DepositForInit,
+          await pool2.FEE_RATE(),
+        );
+
+        await pool
+          .connect(user)
+          .tokenToTokenSwitch(
+            user.address,
+            amountSwitched,
+            expectedTokenOut,
+            token2.address,
+          );
+
+        const finalUserBalance = await token2.balanceOf(user.address);
+
+        const {
+          weiBalance: finalPoolWeiBalance,
+          tokenBalance: finalPoolTokenBalance,
+        } = await getBalances(pool.address, token.balanceOf);
+        const {
+          weiBalance: finalPool2WeiBalance,
+          tokenBalance: finalPool2TokenBalance,
+        } = await getBalances(pool2.address, token2.balanceOf);
+
+        expect(weiDepositForInit.sub(finalPoolWeiBalance)).to.equal(
+          expectedWeiOut,
+        );
+        expect(finalPoolTokenBalance.sub(tokenDepositForInit)).to.equal(
+          amountSwitched,
+        );
+        expect(finalPool2WeiBalance.sub(wei2DepositForInit)).to.equal(
+          expectedWeiOut,
+        );
+        expect(token2DepositForInit.sub(finalPool2TokenBalance)).to.equal(
+          expectedTokenOut,
+        );
+        expect(finalUserBalance.sub(initialUserBalance)).equal(
+          expectedTokenOut,
+        );
+      });
+
+      it('should switch twice', async () => {
+        const amount1Switched = BigNumber.from(1000000);
+        const amount2Switched = BigNumber.from(53000000);
+
+        const initialUserBalance = await token2.balanceOf(user.address);
+
+        const feeRate1 = await pool.FEE_RATE();
+        const feeRate2 = await pool2.FEE_RATE();
+        const expectedWeiOut1 = computeSwitchOutAmount(
+          amount1Switched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          feeRate1,
+        );
+        const expectedTokenOut1 = computeSwitchOutAmount(
+          expectedWeiOut1,
+          wei2DepositForInit,
+          token2DepositForInit,
+          feeRate2,
+        );
+        const expectedWeiOut2 = computeSwitchOutAmount(
+          amount2Switched,
+          tokenDepositForInit.add(amount1Switched),
+          weiDepositForInit.sub(expectedWeiOut1),
+          feeRate1,
+        );
+        const expectedTokenOut2 = computeSwitchOutAmount(
+          expectedWeiOut2,
+          wei2DepositForInit.add(expectedWeiOut1),
+          token2DepositForInit.sub(expectedTokenOut1),
+          feeRate2,
+        );
+
+        await pool
+          .connect(user)
+          .tokenToTokenSwitch(
+            user.address,
+            amount1Switched,
+            expectedTokenOut1,
+            token2.address,
+          );
+        await pool
+          .connect(user)
+          .tokenToTokenSwitch(
+            user.address,
+            amount2Switched,
+            expectedTokenOut2,
+            token2.address,
+          );
+
+        const finalUserBalance = await token2.balanceOf(user.address);
+
+        const {
+          weiBalance: finalPoolWeiBalance,
+          tokenBalance: finalPoolTokenBalance,
+        } = await getBalances(pool.address, token.balanceOf);
+        const {
+          weiBalance: finalPool2WeiBalance,
+          tokenBalance: finalPool2TokenBalance,
+        } = await getBalances(pool2.address, token2.balanceOf);
+
+        expect(weiDepositForInit.sub(finalPoolWeiBalance)).to.equal(
+          expectedWeiOut1.add(expectedWeiOut2),
+        );
+        expect(finalPoolTokenBalance.sub(tokenDepositForInit)).to.equal(
+          amount1Switched.add(amount2Switched),
+        );
+        expect(finalPool2WeiBalance.sub(wei2DepositForInit)).to.equal(
+          expectedWeiOut1.add(expectedWeiOut2),
+        );
+        expect(token2DepositForInit.sub(finalPool2TokenBalance)).to.equal(
+          expectedTokenOut1.add(expectedTokenOut2),
+        );
+        expect(finalUserBalance.sub(initialUserBalance)).equal(
+          expectedTokenOut1.add(expectedTokenOut2),
+        );
+      });
+
+      it('should receive switch on `to` address', async () => {
+        const initialUserBalance = await token2.balanceOf(user2.address);
+
+        const expectedWeiOut = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+
+        const expectedTokenOut = computeSwitchOutAmount(
+          expectedWeiOut,
+          wei2DepositForInit,
+          token2DepositForInit,
+          await pool2.FEE_RATE(),
+        );
+
+        await pool
+          .connect(user)
+          .tokenToTokenSwitch(
+            user2.address,
+            amountSwitched,
+            expectedTokenOut,
+            token2.address,
+          );
+
+        const finalUserBalance = await token2.balanceOf(user2.address);
+
+        expect(finalUserBalance.sub(initialUserBalance)).equal(
+          expectedTokenOut,
+        );
+      });
+
+      it('should emit TokenToEthSwitched & EthToTokenSwitched events', async () => {
+        const expectedWeiOut = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+        const expectedTokenOut = computeSwitchOutAmount(
+          expectedWeiOut,
+          wei2DepositForInit,
+          token2DepositForInit,
+          await pool2.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToTokenSwitch(
+              user.address,
+              amountSwitched,
+              expectedTokenOut,
+              token2.address,
+            ),
+        )
+          .to.emit(pool, 'TokenToEthSwitched')
+          .withArgs(user.address, pool2.address, amountSwitched, expectedWeiOut)
+          .to.emit(pool2, 'EthToTokenSwitched')
+          .withArgs(
+            pool.address,
+            user.address,
+            expectedWeiOut,
+            expectedTokenOut,
+          );
+      });
+
+      it('should emit TokenToEthSwitched & EthToTokenSwitched events with specific `to` address', async () => {
+        const expectedWeiOut = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+        const expectedTokenOut = computeSwitchOutAmount(
+          expectedWeiOut,
+          wei2DepositForInit,
+          token2DepositForInit,
+          await pool2.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToTokenSwitch(
+              user2.address,
+              amountSwitched,
+              expectedTokenOut,
+              token2.address,
+            ),
+        )
+          .to.emit(pool2, 'EthToTokenSwitched')
+          .withArgs(
+            pool.address,
+            user2.address,
+            expectedWeiOut,
+            expectedTokenOut,
+          );
+      });
+
+      it('should not switch if not enough tokens out', async () => {
+        const expectedWeiOut = computeSwitchOutAmount(
+          amountSwitched,
+          tokenDepositForInit,
+          weiDepositForInit,
+          await pool.FEE_RATE(),
+        );
+        const expectedTokenOut = computeSwitchOutAmount(
+          expectedWeiOut,
+          wei2DepositForInit,
+          token2DepositForInit,
+          await pool2.FEE_RATE(),
+        );
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToTokenSwitch(
+              user.address,
+              amountSwitched,
+              expectedTokenOut.add(1),
+              token2.address,
+            ),
+        ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
+      });
+
+      it('should not switch if no pool associated to token', async () => {
+        const { address: randomAddress } = ethers.Wallet.createRandom();
+
+        await expect(
+          pool
+            .connect(user)
+            .tokenToTokenSwitch(user.address, amountSwitched, 0, randomAddress),
+        ).to.be.revertedWith('UniswitchPool: No pool for this token');
       });
     });
   });

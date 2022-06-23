@@ -26,31 +26,28 @@ contract UniswitchPool {
 
     event PoolInitialized(address pool, uint256 weiAmount, uint256 tokenAmount);
     event LiquidityProvided(
-        address user,
+        address provider,
         uint256 sharesCreated,
         uint256 weiAmount,
         uint256 tokenAmount
     );
     event LiquidityWithdrew(
-        address user,
+        address withdrawer,
         uint256 sharesBurnt,
         uint256 weiAmount,
         uint256 tokenAmount
     );
-    event EthToTokenSwitched(address user, uint256 weiIn, uint256 tokenOut);
-    event TokenToEthSwitched(address user, uint256 tokenIn, uint256 weiOut);
-    event TokenToTokenSwitchedPoolA(
-        address user,
-        address token1,
-        address token2,
-        uint256 tokenIn,
-        uint256 weiOut
-    );
-    event TokenToTokenSwitchedPoolB(
-        address user,
-        address token2,
+    event EthToTokenSwitched(
+        address from,
+        address to,
         uint256 weiIn,
         uint256 tokenOut
+    );
+    event TokenToEthSwitched(
+        address from,
+        address to,
+        uint256 tokenIn,
+        uint256 weiOut
     );
 
     constructor(address _tokenAddr) public {
@@ -77,9 +74,9 @@ contract UniswitchPool {
         totalShares = 100000000;
         k = msg.value.mul(tokenAmount);
 
-        emit PoolInitialized(address(this), msg.value, tokenAmount);
-
         token.safeTransferFrom(msg.sender, address(this), tokenAmount);
+
+        emit PoolInitialized(address(this), msg.value, tokenAmount);
     }
 
     function provideLiquidity(uint256 minShares) external payable {
@@ -149,64 +146,9 @@ contract UniswitchPool {
         payable(msg.sender).sendValue(weiAmount);
     }
 
-    function ethToTokenSwitch(uint256 minTokenOut) external payable {
-        uint256 tokenOut = ethInHandler(msg.sender, minTokenOut);
-
-        emit EthToTokenSwitched(msg.sender, msg.value, tokenOut);
-    }
-
-    function tokenToEthSwitch(uint256 tokenAmount, uint256 minWeiOut) external {
-        uint256 weiOut = tokenInHandler(msg.sender, tokenAmount, minWeiOut);
-
-        emit TokenToEthSwitched(msg.sender, tokenAmount, weiOut);
-
-        payable(msg.sender).sendValue(weiOut);
-    }
-
-    function tokenToTokenSwitch(
-        uint256 _token1Amount,
-        uint256 _minToken2Amount,
-        address _token2Addr
-    ) external {
-        uint256 _weiOut = tokenInHandler(msg.sender, _token1Amount, 0);
-
-        address _poolToken2Addr = factory.tokenToPool(_token2Addr);
-        UniswitchPool _poolToken2 = UniswitchPool(_poolToken2Addr);
-
-        _poolToken2.tokenToTokenIn{value: _weiOut}(
-            msg.sender,
-            _minToken2Amount
-        );
-
-        emit TokenToTokenSwitchedPoolA(
-            msg.sender,
-            address(token),
-            _token2Addr,
-            _token1Amount,
-            _weiOut
-        );
-    }
-
-    function tokenToTokenIn(address _to, uint256 _minTokenOut)
+    function ethToTokenSwitch(address to, uint256 minTokenOut)
         external
         payable
-    {
-        address tokenAssociated = factory.poolToToken(msg.sender);
-        require(tokenAssociated != address(0), "Sender is not a pool");
-
-        uint256 _tokenOut = ethInHandler(_to, _minTokenOut);
-
-        emit TokenToTokenSwitchedPoolB(
-            _to,
-            address(token),
-            msg.value,
-            _tokenOut
-        );
-    }
-
-    function ethInHandler(address to, uint256 minTokenOut)
-        private
-        returns (uint256)
     {
         uint256 newWeiBalance = address(this).balance;
         uint256 fee = msg.value.div(FEE_RATE);
@@ -225,25 +167,58 @@ contract UniswitchPool {
 
         token.safeTransfer(to, tokenOut);
 
-        return tokenOut;
+        emit EthToTokenSwitched(msg.sender, to, msg.value, tokenOut);
+    }
+
+    function tokenToEthSwitch(
+        address payable to,
+        uint256 tokenInAmount,
+        uint256 minWeiOut
+    ) external {
+        uint256 weiOut = tokenInHandler(to, tokenInAmount, minWeiOut);
+        to.sendValue(weiOut);
+    }
+
+    function tokenToTokenSwitch(
+        address to,
+        uint256 tokenInAmount,
+        uint256 minTokenOutAmount,
+        address tokenOutAddr
+    ) external {
+        address poolTokenOutAddr = factory.tokenToPool(tokenOutAddr);
+
+        require(
+            poolTokenOutAddr != address(0),
+            "UniswitchPool: No pool for this token"
+        );
+
+        uint256 weiOut = tokenInHandler(poolTokenOutAddr, tokenInAmount, 0);
+        UniswitchPool(poolTokenOutAddr).ethToTokenSwitch{value: weiOut}(
+            to,
+            minTokenOutAmount
+        );
     }
 
     function tokenInHandler(
         address to,
-        uint256 tokenAmount,
+        uint256 tokenInAmount,
         uint256 minWeiOut
-    ) private returns (uint256) {
+    ) private returns (uint256 weiOut) {
         uint256 newTokenBalance = token.balanceOf(address(this)).add(
-            tokenAmount
+            tokenInAmount
         );
-        uint256 fee = tokenAmount.div(FEE_RATE);
-        uint256 newWeiBalance = k.div(newTokenBalance.sub(fee));
-        uint256 weiOut = address(this).balance.sub(newWeiBalance);
+        uint256 fee = tokenInAmount.div(FEE_RATE);
+        // Cannot underflow because due to its computation, fee is always lower
+        // than newTokenBalance
+        uint256 newWeiBalance = k.div(newTokenBalance - fee);
+        weiOut = address(this).balance.sub(newWeiBalance);
 
         require(weiOut >= minWeiOut, "UniswitchPool: Not enough wei received");
 
-        token.safeTransferFrom(to, address(this), tokenAmount);
+        k = newWeiBalance.mul(newTokenBalance);
 
-        return weiOut;
+        token.safeTransferFrom(msg.sender, address(this), tokenInAmount);
+
+        emit TokenToEthSwitched(msg.sender, to, tokenInAmount, weiOut);
     }
 }
