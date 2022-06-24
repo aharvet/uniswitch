@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IUniswitchFactory.sol";
 
-import "hardhat/console.sol";
-
 contract UniswitchPool {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
