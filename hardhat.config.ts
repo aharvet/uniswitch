@@ -1,18 +1,21 @@
-require('dotenv').config();
+import * as dotenv from "dotenv";
 
-require('@nomiclabs/hardhat-waffle');
-require('hardhat-gas-reporter');
-require('@nomiclabs/hardhat-etherscan');
-require('solidity-coverage');
-require('hardhat-tracer');
+import "@nomiclabs/hardhat-waffle";
+import "hardhat-gas-reporter";
+import "@nomiclabs/hardhat-etherscan";
+import "solidity-coverage";
+import "hardhat-tracer";
+import "@typechain/hardhat";
+
+dotenv.config();
 
 // Macros
 const showGasReporter = false;
 const enableOptimizer = true;
 
-module.exports = {
+export default {
   solidity: {
-    version: '0.6.12',
+    version: "0.6.12",
     settings: {
       optimizer: {
         enabled: showGasReporter || enableOptimizer,
@@ -25,13 +28,13 @@ module.exports = {
       initialBaseFeePerGas: 0,
     },
     goerli: {
-      url: process.env.GOERLI_ENDPOINT || '',
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY] || '',
+      url: process.env.GOERLI_ENDPOINT || "",
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY] || "",
     },
   },
   gasReporter: {
     enabled: showGasReporter,
-    currency: 'USD',
+    currency: "USD",
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
   etherscan: {

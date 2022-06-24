@@ -1,26 +1,34 @@
-const { BigNumber } = require('ethers');
-const {
-  waffle: { provider },
-} = require('hardhat');
+import { waffle } from 'hardhat';
+import { UniswitchPool } from '../typechain-types/contracts/UniswitchPool';
+import { BigNumber } from 'ethers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-const getBalances = async (addr, getTokenBalance) => {
+const { provider } = waffle;
+
+export const getBalances = async (
+  addr: string,
+  getTokenBalance: (account: string) => Promise<BigNumber>,
+) => {
   const weiBalance = await provider.getBalance(addr);
   const tokenBalance = await getTokenBalance(addr);
   return { weiBalance, tokenBalance };
 };
 
-const getPoolShares = async (addr, pool) => {
+export const getPoolShares = async (
+  addr: string,
+  pool: UniswitchPool,
+): Promise<{ userShares: BigNumber; totalShares: BigNumber }> => {
   const userShares = await pool.shares(addr);
   const totalShares = await pool.totalShares();
   return { userShares, totalShares };
 };
 
-const computeSwitchInAmount = (
-  amountOut,
-  coinInBalance,
-  coinOutBalance,
-  feeRate,
-) => {
+export const computeSwitchInAmount = (
+  amountOut: BigNumber,
+  coinInBalance: BigNumber,
+  coinOutBalance: BigNumber,
+  feeRate: BigNumber,
+): BigNumber => {
   if (amountOut.gte(coinOutBalance))
     throw new Error('amountOut >= coinOutBalance');
   const one = BigNumber.from(1);
@@ -34,12 +42,12 @@ const computeSwitchInAmount = (
   return amountIn;
 };
 
-const computeSwitchOutAmount = (
-  amountIn,
-  coinInBalance,
-  coinOutBalance,
-  feeRate,
-) => {
+export const computeSwitchOutAmount = (
+  amountIn: BigNumber,
+  coinInBalance: BigNumber,
+  coinOutBalance: BigNumber,
+  feeRate: BigNumber,
+): BigNumber => {
   const fee = amountIn.div(feeRate);
   const newCoinInBalance = coinInBalance.add(amountIn);
   const invariant = coinInBalance.mul(coinOutBalance);
@@ -49,16 +57,15 @@ const computeSwitchOutAmount = (
   return amountOut;
 };
 
-const computeSharesAmount = (
-  weiProvided,
-  initialWeiBalance,
-  initialTokenBalance,
-  initialTotalShares,
-) => {
+export const computeSharesAmount = (
+  weiProvided: BigNumber,
+  initialWeiBalance: BigNumber,
+  initialTokenBalance: BigNumber,
+  initialTotalShares: BigNumber,
+): { expectedShareAmount: BigNumber; expectedTokenAmount: BigNumber } => {
   const expectedShareAmount = weiProvided
     .mul(initialTotalShares)
     .div(initialWeiBalance);
-
   const expectedTokenAmount = expectedShareAmount
     .mul(initialTokenBalance)
     .div(initialTotalShares);
@@ -66,28 +73,14 @@ const computeSharesAmount = (
 };
 
 // Initialization is done by default account
-const initPoolAndReturnSharesData = async (
-  account,
-  pool,
-  tokenAmount,
-  weiAmount,
-) => {
+export const initPoolAndReturnSharesData = async (
+  account: SignerWithAddress,
+  pool: UniswitchPool,
+  tokenAmount: BigNumber,
+  weiAmount: BigNumber,
+): Promise<{ userShares: BigNumber; totalShares: BigNumber }> => {
   await pool.initializePool(tokenAmount, {
     value: weiAmount,
   });
   return await getPoolShares(account.address, pool);
-};
-
-// const getTokensBalances = async (addr, tokensAbstract) => {
-//   return Promise.all(tokensAbstract.map((tokenAbstract) => tokenAbstract.balanceOf(addr)));
-// };
-
-module.exports = {
-  getBalances,
-  getPoolShares,
-  computeSwitchInAmount,
-  computeSwitchOutAmount,
-  computeSharesAmount,
-  initPoolAndReturnSharesData,
-  //   getTokensBalances,
 };

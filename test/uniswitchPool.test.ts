@@ -1,24 +1,29 @@
-const { expect } = require('chai');
-const {
-  ethers: { utils, getSigners, getContractFactory, BigNumber },
-  waffle: { provider },
-} = require('hardhat');
-
-const {
+import hre, { ethers, waffle } from 'hardhat';
+import { expect } from 'chai';
+import {
   getBalances,
   getPoolShares,
   computeSwitchOutAmount,
   computeSharesAmount,
   initPoolAndReturnSharesData,
-} = require('./utils');
+} from './utils';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { TestToken } from '../typechain-types/contracts/tests/TestToken';
+import { UniswitchFactory } from '../typechain-types/contracts/UniswitchFactory';
+import { UniswitchPool } from '../typechain-types/contracts/UniswitchPool';
+
+const { utils, getSigners, getContractFactory, BigNumber } = ethers;
+const { provider } = waffle;
 
 describe('UniswitchPool', () => {
   const oneWith18Decimals = utils.parseUnits('1', 18);
 
-  let owner, user, user2;
-  let token;
-  let factory;
-  let pool;
+  let owner: SignerWithAddress;
+  let user: SignerWithAddress;
+  let user2: SignerWithAddress;
+  let token: TestToken;
+  let factory: UniswitchFactory;
+  let pool: UniswitchPool;
 
   beforeEach(async () => {
     [owner, user, user2] = await getSigners();
@@ -27,13 +32,13 @@ describe('UniswitchPool', () => {
     const UniswitchFactory = await getContractFactory('UniswitchFactory');
     const UniswitchPool = await getContractFactory('UniswitchPool');
 
-    token = await TestToken.deploy('Test Token', 'TTK');
-    factory = await UniswitchFactory.deploy();
+    token = (await TestToken.deploy('Test Token', 'TTK')) as TestToken;
+    factory = (await UniswitchFactory.deploy()) as UniswitchFactory;
 
     const tx = await factory.launchPool(token.address);
     const { events } = await tx.wait();
-    const poolAddress = events[0].args.pool;
-    pool = UniswitchPool.attach(poolAddress);
+    const poolAddress = events?.[0].args?.pool;
+    pool = UniswitchPool.attach(poolAddress) as UniswitchPool;
 
     await token.mint(owner.address, oneWith18Decimals);
     await token.mint(user.address, oneWith18Decimals);
@@ -640,7 +645,7 @@ describe('UniswitchPool', () => {
         expect(finalPoolTokenBalance.sub(tokenDepositForInit)).to.equal(
           amountSwitched,
         );
-        expect(events[events.length - 1].args.weiOut).to.equal(
+        expect(events?.[events.length - 1].args?.weiOut).to.equal(
           expectedWeiAmount,
         );
       });
@@ -672,8 +677,8 @@ describe('UniswitchPool', () => {
           .tokenToEthSwitch(user.address, amount2Switched, expectedWeiOut2);
         const { events: events2 } = await tx2.wait();
 
-        const weiOut1 = events1[events1.length - 1].args.weiOut;
-        const weiOut2 = events2[events1.length - 1].args.weiOut;
+        const weiOut1 = events1?.[events1.length - 1].args?.weiOut;
+        const weiOut2 = events2?.[events2.length - 1].args?.weiOut;
 
         const {
           weiBalance: finalPoolWeiBalance,
@@ -790,19 +795,19 @@ describe('UniswitchPool', () => {
       const token2DepositForInit = BigNumber.from(3000000000);
       const amountSwitched = BigNumber.from(2500000);
 
-      let token2;
-      let pool2;
+      let token2: TestToken;
+      let pool2: UniswitchPool;
 
       beforeEach(async () => {
         const TestToken = await getContractFactory('TestToken');
         const UniswitchPool = await getContractFactory('UniswitchPool');
 
-        token2 = await TestToken.deploy('Test Token 2', 'TTK2');
+        token2 = (await TestToken.deploy('Test Token 2', 'TTK2')) as TestToken;
 
         const tx = await factory.launchPool(token2.address);
         const { events } = await tx.wait();
-        const pool2Address = events[0].args.pool;
-        pool2 = UniswitchPool.attach(pool2Address);
+        const pool2Address = events?.[0].args?.pool;
+        pool2 = UniswitchPool.attach(pool2Address) as UniswitchPool;
 
         await token2.mint(owner.address, oneWith18Decimals);
         await token2.approve(pool2Address, oneWith18Decimals);

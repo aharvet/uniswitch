@@ -3,7 +3,7 @@
   "plugins": ["prettier"],
   "rules": {
     "compiler-version": ["error", "0.6.12"],
-    "max-line-length": ["warn", 100],
+    "max-line-length": ["warn", 80],
     "reason-string": ["warn", { "maxLength": 64 }]
   }
 }

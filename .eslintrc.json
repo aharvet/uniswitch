@@ -1,7 +1,6 @@
 {
   "env": {
-    "browser": true,
-    "commonjs": true,
+    "browser": false,
     "es2021": true,
     "mocha": true
   },

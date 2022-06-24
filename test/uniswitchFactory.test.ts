@@ -1,21 +1,23 @@
-const { expect } = require('chai');
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+import { TestToken } from '../typechain-types/contracts/tests/TestToken';
+import { UniswitchFactory } from '../typechain-types/contracts/UniswitchFactory';
+
 const {
-  ethers: {
-    getContractFactory,
-    constants: { AddressZero },
-  },
-} = require('hardhat');
+  getContractFactory,
+  constants: { AddressZero },
+} = ethers;
 
 describe('UniswitchFactory', () => {
-  let token;
-  let factory;
+  let token: TestToken;
+  let factory: UniswitchFactory;
 
   beforeEach(async () => {
     const TestToken = await getContractFactory('TestToken');
     const UniswitchFactory = await getContractFactory('UniswitchFactory');
 
-    token = await TestToken.deploy('Test Token', 'TTK');
-    factory = await UniswitchFactory.deploy();
+    token = (await TestToken.deploy('Test Token', 'TTK')) as TestToken;
+    factory = (await UniswitchFactory.deploy()) as UniswitchFactory;
   });
 
   it('should launch a pool', async () => {
@@ -31,8 +33,8 @@ describe('UniswitchFactory', () => {
 
     await expect(tx).to.emit(factory, 'PoolLaunched');
     if (!events) return;
-    expect(events[0].args.token).to.equal(token.address);
-    expect(events[0].args.pool).to.not.be.undefined;
+    expect(events[0].args?.token).to.equal(token.address);
+    expect(events[0].args?.pool).to.not.be.undefined;
   });
 
   it('should not lauch a pool with zero address', async () => {
