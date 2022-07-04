@@ -8,7 +8,7 @@ contract UniswitchFactory {
     mapping(address => address) public tokenToPool;
     mapping(address => address) public poolToToken;
 
-    event PoolLaunched(address token, address pool);
+    event PoolLaunched(address indexed token, address pool);
 
     function launchPool(address token) external {
         require(token != address(0), "UniswitchFactory: Zero address provided");

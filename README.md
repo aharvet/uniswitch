@@ -2,7 +2,7 @@
 
 Uniswitch is an Ethereum smart contract protocol that enables users to exchange ether and ERC20 tokens together.
 The protocol works with liquidity pools that removes the need to match a maker and a taker order.
-The protocol takes a .25% fee.
+The protocol takes a 0.25% fee for an ETH to token or token to ETH switch and a 0.5% fee for a token to token switch.
 
 You can try the protocol with the goerli testnet instance at this address: `0x57a866Bfb81D0FC2aaF1CddA7948a3e41587A585`
 [See on Etherscan](https://goerli.etherscan.io/address/0x57a866Bfb81D0FC2aaF1CddA7948a3e41587A585#code)

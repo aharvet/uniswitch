@@ -24,26 +24,26 @@ contract UniswitchPool {
 
     event PoolInitialized(uint256 weiAmount, uint256 tokenAmount);
     event LiquidityProvided(
-        address provider,
+        address indexed provider,
         uint256 sharesCreated,
         uint256 weiAmount,
         uint256 tokenAmount
     );
     event LiquidityWithdrew(
-        address withdrawer,
+        address indexed withdrawer,
         uint256 sharesBurnt,
         uint256 weiAmount,
         uint256 tokenAmount
     );
     event EthToTokenSwitched(
-        address from,
-        address to,
+        address indexed from,
+        address indexed to,
         uint256 weiIn,
         uint256 tokenOut
     );
     event TokenToEthSwitched(
-        address from,
-        address to,
+        address indexed from,
+        address indexed to,
         uint256 tokenIn,
         uint256 weiOut
     );
