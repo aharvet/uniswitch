@@ -48,14 +48,14 @@ contract UniswitchPool {
         uint256 weiOut
     );
 
-    constructor(address _tokenAddr) public {
+    constructor(address tokenAddr) public {
         require(
-            _tokenAddr != address(0),
+            tokenAddr != address(0),
             "UniswitchPool: Zero address provided"
         );
 
         factory = IUniswitchFactory(msg.sender);
-        token = IERC20(_tokenAddr);
+        token = IERC20(tokenAddr);
     }
 
     /// @notice Has to be called anytime the pool has no liquidity.

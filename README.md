@@ -1,6 +1,6 @@
 # Uniswitch
 
-Uniswitch is an Ethereum smart contract protocol that enables users to exchange ether and ERC20 tokens together.
+Uniswitch is a protocol that enables users to exchange ether and ERC20 tokens together.
 The protocol works with liquidity pools that removes the need to match a maker and a taker order.
 The protocol takes a 0.25% fee for an ETH to token or token to ETH switch and a 0.5% fee for a token to token switch.
 
@@ -93,12 +93,12 @@ Emits a "EthToTokenSwitched" event from the first pool, and "EthToTokenSwitched"
 
 ## Events
 
-- PoolLaunched(address token, address pool)
+- PoolLaunched(address indexed token, address pool)
 - PoolInitialized(uint256 weiAmount, uint256 tokenAmount)
-- LiquidityProvided(address provider, uint256 sharesCreated, uint256 weiAmount, uint256 tokenAmount)
-- LiquidityWithdrew(address withdrawer, uint256 sharesBurnt, uint256 weiAmount, uint256 tokenAmount)
-- EthToTokenSwitched(address from, address to, uint256 weiIn, uint256 tokenOut)
-- TokenToEthSwitched(address from, address to, uint256 tokenIn, uint256 weiOut)
+- LiquidityProvided(address indexed provider, uint256 sharesCreated, uint256 weiAmount, uint256 tokenAmount)
+- LiquidityWithdrew(address indexed withdrawer, uint256 sharesBurnt, uint256 weiAmount, uint256 tokenAmount)
+- EthToTokenSwitched(address indexed from, address indexed to, uint256 weiIn, uint256 tokenOut)
+- TokenToEthSwitched(address indexed from, address indexed to, uint256 tokenIn, uint256 weiOut)
 
 ## Usage
 
