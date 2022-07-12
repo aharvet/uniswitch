@@ -11,10 +11,9 @@ contract UniswitchFactory {
     event PoolLaunched(address indexed token, address pool);
 
     function launchPool(address token) external {
-        require(token != address(0), "UniswitchFactory: Zero address provided");
         require(
             tokenToPool[token] == address(0),
-            "UniswitchFactory: Pool already created for token"
+            "UniswitchFactory: pool already created for token"
         );
 
         address pool = address(new UniswitchPool(token));

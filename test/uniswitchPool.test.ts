@@ -12,7 +12,13 @@ import { TestToken } from '../typechain-types/contracts/tests/TestToken';
 import { UniswitchFactory } from '../typechain-types/contracts/UniswitchFactory';
 import { UniswitchPool } from '../typechain-types/contracts/UniswitchPool';
 
-const { utils, getSigners, getContractFactory, BigNumber } = ethers;
+const {
+  utils,
+  getSigners,
+  getContractFactory,
+  BigNumber,
+  constants: { AddressZero },
+} = ethers;
 const { provider } = waffle;
 
 describe('UniswitchPool', () => {
@@ -49,6 +55,13 @@ describe('UniswitchPool', () => {
     hre.tracer.nameTags[user.address] = 'USER';
     hre.tracer.nameTags[factory.address] = 'FACTORY';
     hre.tracer.nameTags[pool.address] = 'POOL';
+  });
+
+  it('should not lauch a pool with zero address', async () => {
+    const UniswitchPool = await getContractFactory('UniswitchPool');
+    await expect(UniswitchPool.deploy(AddressZero)).to.be.revertedWith(
+      'UniswitchPool: zero address provided',
+    );
   });
 
   describe('initializePool', () => {
@@ -90,13 +103,13 @@ describe('UniswitchPool', () => {
     it('should not initialize pool with less than 100000 ether', async () => {
       await expect(
         pool.initializePool(tokenPooled, { value: 100 }),
-      ).to.revertedWith('UniswitchPool: Not enough liquidity provided');
+      ).to.revertedWith('UniswitchPool: not enough liquidity provided');
     });
 
     it('should not initialize pool with less than 100000 tokens', async () => {
       await expect(
         pool.initializePool(100, { value: weiPooled }),
-      ).to.revertedWith('UniswitchPool: Not enough liquidity provided');
+      ).to.revertedWith('UniswitchPool: not enough liquidity provided');
     });
 
     it('should not initialize pool if already initialized ', async () => {
@@ -106,7 +119,7 @@ describe('UniswitchPool', () => {
 
       await expect(
         pool.connect(user).initializePool(tokenPooled, { value: weiPooled }),
-      ).to.be.revertedWith('UniswitchPool: Pool already has liquidity');
+      ).to.be.revertedWith('UniswitchPool: pool already has liquidity');
     });
   });
 
@@ -182,7 +195,7 @@ describe('UniswitchPool', () => {
     it('should not provide liquidity if pool not initialized', async () => {
       await expect(
         pool.connect(user).provideLiquidity(0, { value: weiProvided }),
-      ).to.be.revertedWith('UniswitchPool: Pool not initialized');
+      ).to.be.revertedWith('UniswitchPool: pool not initialized');
     });
 
     it('should not provide liquidity if not enough share received', async () => {
@@ -204,7 +217,7 @@ describe('UniswitchPool', () => {
         pool
           .connect(user)
           .provideLiquidity(expectedShareAmount.add(1), { value: weiProvided }),
-      ).to.be.revertedWith('UniswitchPool: Not enough share received');
+      ).to.be.revertedWith('UniswitchPool: not enough share received');
     });
   });
 
@@ -419,13 +432,13 @@ describe('UniswitchPool', () => {
 
       await expect(
         pool.withdrawLiquidity(weiWithdrew, expectedTokenAmount.add(1)),
-      ).to.be.revertedWith('UniswitchPool: Not enough token in return');
+      ).to.be.revertedWith('UniswitchPool: not enough token in return');
     });
 
     it('should not withdraw if not enough liquidity', async () => {
       await expect(
         pool.withdrawLiquidity(weiDepositForInit.add(1), 0),
-      ).to.be.revertedWith('UniswitchPool: Not enough shares in the pool');
+      ).to.be.revertedWith('UniswitchPool: not enough shares in the pool');
     });
   });
 
@@ -614,7 +627,7 @@ describe('UniswitchPool', () => {
             .ethToTokenSwitch(user.address, expectedTokenAmount.add(1), {
               value: amountSwitched,
             }),
-        ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
+        ).to.be.revertedWith('UniswitchPool: not enough tokens received');
       });
     });
 
@@ -786,7 +799,7 @@ describe('UniswitchPool', () => {
               amountSwitched,
               expectedWeiAmount.add(1),
             ),
-        ).to.be.revertedWith('UniswitchPool: Not enough wei received');
+        ).to.be.revertedWith('UniswitchPool: not enough wei received');
       });
     });
 
@@ -1075,7 +1088,7 @@ describe('UniswitchPool', () => {
               expectedTokenOut.add(1),
               token2.address,
             ),
-        ).to.be.revertedWith('UniswitchPool: Not enough tokens received');
+        ).to.be.revertedWith('UniswitchPool: not enough tokens received');
       });
 
       it('should not switch if no pool associated to token', async () => {
@@ -1085,7 +1098,7 @@ describe('UniswitchPool', () => {
           pool
             .connect(user)
             .tokenToTokenSwitch(user.address, amountSwitched, 0, randomAddress),
-        ).to.be.revertedWith('UniswitchPool: No pool for this token');
+        ).to.be.revertedWith('UniswitchPool: no pool for this token');
       });
     });
   });

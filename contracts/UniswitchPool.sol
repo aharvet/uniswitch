@@ -51,7 +51,7 @@ contract UniswitchPool {
     constructor(address tokenAddr) public {
         require(
             tokenAddr != address(0),
-            "UniswitchPool: Zero address provided"
+            "UniswitchPool: zero address provided"
         );
 
         factory = IUniswitchFactory(msg.sender);
@@ -62,10 +62,10 @@ contract UniswitchPool {
     /// That means it can be called multiple times in the pool lifetime.
     function initializePool(uint256 tokenAmount) external payable {
         // If no shares in circulation, the pool has no liquidity
-        require(totalShares == 0, "UniswitchPool: Pool already has liquidity");
+        require(totalShares == 0, "UniswitchPool: pool already has liquidity");
         require(
             msg.value >= 100000 && tokenAmount >= 100000,
-            "UniswitchPool: Not enough liquidity provided"
+            "UniswitchPool: not enough liquidity provided"
         );
 
         shares[msg.sender] = 100000000;
@@ -80,7 +80,7 @@ contract UniswitchPool {
     function provideLiquidity(uint256 minShares) external payable {
         uint256 _totalShares = totalShares; // gas savings
         // If no shares in circulation, the pool has no liquidity
-        require(_totalShares != 0, "UniswitchPool: Pool not initialized");
+        require(_totalShares != 0, "UniswitchPool: pool not initialized");
 
         // Computes the rate of shares per wei inside the pool, and multiply it
         // by the amount of wei invested
@@ -90,7 +90,7 @@ contract UniswitchPool {
         );
         require(
             sharesAmount >= minShares,
-            "UniswitchPool: Not enough share received"
+            "UniswitchPool: not enough share received"
         );
 
         // Computes the rate of token inside the pool per shares, and multiply it
@@ -127,13 +127,13 @@ contract UniswitchPool {
         );
         require(
             tokenOut >= minToken,
-            "UniswitchPool: Not enough token in return"
+            "UniswitchPool: not enough token in return"
         );
 
         // Will revert if user tries to withdraw more than authorized
         shares[msg.sender] = shares[msg.sender].sub(
             sharesAmount,
-            "UniswitchPool: Not enough shares in the pool"
+            "UniswitchPool: not enough shares in the pool"
         );
         // Will never underflow because the number of shares burnt is proportionnaly to liquidity withdrew
         totalShares -= sharesAmount;
@@ -159,7 +159,7 @@ contract UniswitchPool {
 
         require(
             tokenOut >= minTokenOut,
-            "UniswitchPool: Not enough tokens received"
+            "UniswitchPool: not enough tokens received"
         );
 
         k = newWeiBalance.mul(newTokenBalance);
@@ -188,7 +188,7 @@ contract UniswitchPool {
 
         require(
             poolTokenOutAddr != address(0),
-            "UniswitchPool: No pool for this token"
+            "UniswitchPool: no pool for this token"
         );
 
         uint256 weiOut = tokenInHandler(poolTokenOutAddr, tokenInAmount, 0);
@@ -212,7 +212,7 @@ contract UniswitchPool {
         uint256 newWeiBalance = k.div(newTokenBalance - fee);
         weiOut = address(this).balance.sub(newWeiBalance);
 
-        require(weiOut >= minWeiOut, "UniswitchPool: Not enough wei received");
+        require(weiOut >= minWeiOut, "UniswitchPool: not enough wei received");
 
         k = newWeiBalance.mul(newTokenBalance);
 
