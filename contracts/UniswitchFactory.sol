@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-import "./UniswitchPool.sol";
+import {UniswitchPool} from "./UniswitchPool.sol";
 
 contract UniswitchFactory {
     mapping(address => address) public tokenToPool;

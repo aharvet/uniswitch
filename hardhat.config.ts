@@ -10,7 +10,7 @@ import '@typechain/hardhat';
 dotenv.config();
 
 // Macros
-const showGasReporter = false;
+const showGasReporter = true;
 const enableOptimizer = true;
 
 export default {
